@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* `ur:` variant, for Urdu-specific sizing (Nastaliq needs more room than Latin text). */
+@custom-variant ur (&:where([lang="ur"], [lang="ur"] *));
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-urdu: var(--font-nastaliq), var(--font-jakarta), serif;
+
+  /* Calm, trustworthy teal. Only 700+ is used for text on white (AA contrast). */
+  --color-brand-50: #effaf6;
+  --color-brand-100: #d8f3e9;
+  --color-brand-200: #b3e6d5;
+  --color-brand-300: #80d2bb;
+  --color-brand-400: #4bb69c;
+  --color-brand-500: #289a82;
+  --color-brand-600: #1a7c6a;
+  --color-brand-700: #176357;
+  --color-brand-800: #164f47;
+  --color-brand-900: #14423c;
+  --color-brand-950: #072622;
+
+  /* Warm off-white surfaces, so the page doesn't feel clinical. */
+  --color-sand-50: #fbf9f5;
+  --color-sand-100: #f5f0e6;
+  --color-sand-200: #ebe1cd;
+  --color-sand-300: #dccbab;
+
+  --color-accent-300: #f8cd85;
+  --color-accent-400: #f5b14c;
+
+  --animate-float: float 7s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+}
+
+@utility shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 76rem;
+  padding-inline: 1.25rem;
+
+  @media (width >= 40rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@layer base {
+  html {
+    /* 17px base: easier to read for older patients. */
+    font-size: 106.25%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    @apply bg-sand-50 font-sans text-stone-800 antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}
+
+/* Urdu: Nastaliq is tall, so it needs more generous line-height than Tailwind's defaults. */
+:root[lang="ur"] body {
+  font-family: var(--font-urdu);
+  line-height: 2;
+}
+:root[lang="ur"] :is(h1, h2, h3) {
+  line-height: 1.9;
+  letter-spacing: 0;
+}
+:root[lang="ur"] :is(p, li, label, a, button, summary, dd, input, select, textarea, legend) {
+  line-height: 2;
+}
+
+/* Scroll-reveal. Content is hidden only when JS is running, so it is always visible without JS. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.js [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-float,
+  .animate-ping {
+    animation: none;
+  }
+}

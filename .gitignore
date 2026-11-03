@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files: real values never get committed; .env.example documents the keys
+.env
+.env.*
+!.env.example
+
+# Deploy tooling
+.vercel
+.wrangler
+
+# Logs and test output
+*.log
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
