@@ -1,6 +1,6 @@
 # Khidmat Care
 
-Home physiotherapy in Lahore by verified physiotherapists. The product spec is in [khidmat-care-PRD.md](khidmat-care-PRD.md).
+Home physiotherapy in Lahore by verified physiotherapists.
 
 **Current stage: Phase 0 (validation).** The site is a static landing page. Bookings go through WhatsApp, and admin assigns physios by hand.
 
@@ -14,9 +14,9 @@ apps/
     src/content/          All page text: en.ts, ur.ts (edit copy here)
     src/config/site.ts    WhatsApp number, phone, package prices
     src/components/       Landing sections and UI building blocks
+  api/                    FastAPI backend, see apps/api/README.md
+infra/                    Local services (Postgres) via Docker Compose
 ```
-
-The repo is a pnpm workspace, so the FastAPI backend (`apps/api`) can be added next to it for v1.
 
 ## Development
 
@@ -37,6 +37,7 @@ Listed in [apps/web/.env.example](apps/web/.env.example). For local development,
 | Variable | Test deployment | Real domain |
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | `https://<project>.vercel.app` | `https://khidmat.care` |
+| `NEXT_PUBLIC_API_URL` | The deployed API's URL | `https://api.khidmat.care` |
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | `923001234567` | same |
 | `NEXT_PUBLIC_PHONE` | `+923001234567` | same |
 | `NEXT_PUBLIC_ALLOW_INDEXING` | `false` (noindex, robots.txt blocks everything) | `true` |

@@ -1,0 +1,23 @@
+# Local development services. Run from the repo root:
+#   docker compose -f infra/docker-compose.yml up -d
+name: khidmat-care
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: khidmat
+      POSTGRES_PASSWORD: khidmat_local_only
+      POSTGRES_DB: khidmat
+    ports:
+      - "127.0.0.1:5432:5432" # Local machine only, never the network.
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khidmat -d khidmat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:

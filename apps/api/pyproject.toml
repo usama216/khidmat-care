@@ -1,0 +1,64 @@
+[project]
+name = "khidmat-api"
+version = "0.1.0"
+description = "Khidmat Care core API"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "alembic>=1.20,<2",
+    "asyncpg>=0.31,<1",
+    "fastapi>=0.162,<1",
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.16,<3",
+    "sqlalchemy[asyncio]>=2.1,<2.2",
+    "structlog>=26.1",
+    "uvicorn[standard]>=0.54,<1",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1",
+    "mypy>=2.4,<3",
+    "pytest>=9.2,<10",
+    "pytest-asyncio>=1.3,<2",
+    "ruff>=0.17,<0.18",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "khidmat_api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "N", "S", "C4", "DTZ", "T20", "SIM", "RUF", "ASYNC", "PT"]
+ignore = [
+    "B008", # FastAPI's Depends() in argument defaults is the documented pattern.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "RUF001"] # RUF001 flags Urdu punctuation in test data.
+"migrations/versions/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+files = ["src", "tests", "migrations"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "--strict-markers --strict-config -ra"
+filterwarnings = ["error"]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ChevronDown, Lock } from "lucide-react";
 import {
   serviceIds,
@@ -13,6 +13,7 @@ import { lahoreAreas } from "@/config/site";
 import { cn } from "@/lib/cn";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { buttonClasses } from "@/components/ui/button";
+import { Field, inputClass } from "@/components/ui/form";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 import { SELECT_SERVICE_EVENT } from "./SelectServiceLink";
 
@@ -36,9 +37,6 @@ const initial: Fields = {
   time: "morning",
   notes: "",
 };
-
-const inputClass =
-  "block w-full rounded-2xl border-0 bg-sand-50 px-4 py-3.5 text-base text-stone-900 ring-1 ring-stone-300/80 transition placeholder:text-stone-400 hover:ring-stone-400 focus:bg-white focus:ring-2 focus:ring-brand-600 focus:outline-none aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-500";
 
 export function BookingForm({ t }: { t: Dictionary }) {
   const f = t.book.form;
@@ -214,22 +212,6 @@ export function BookingForm({ t }: { t: Dictionary }) {
         {f.privacy}
       </p>
     </form>
-  );
-}
-
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-2 block text-[0.95rem] font-semibold text-stone-800">
-        {label}
-      </label>
-      {children}
-      {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-sm font-medium text-red-600">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }
 

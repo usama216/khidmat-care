@@ -1,6 +1,7 @@
 import type { Dictionary } from "@/content/types";
 import { site } from "@/config/site";
 import { BookSection } from "./BookSection";
+import { ContactSection } from "./ContactSection";
 import { Faq } from "./Faq";
 import { Families } from "./Families";
 import { Footer } from "./Footer";
@@ -44,6 +45,7 @@ export function Landing({ t }: { t: Dictionary }) {
         <BookSection t={t} />
         <ForPhysios t={t} />
         <Faq t={t} />
+        <ContactSection t={t} />
       </main>
       <Footer t={t} />
       <MobileBar t={t} />

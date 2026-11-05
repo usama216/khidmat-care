@@ -139,6 +139,29 @@ export type Dictionary = {
     message: string;
   };
   faq: { eyebrow: string; title: string; moreTitle: string; moreCta: string; items: { q: string; a: string }[] };
+  contact: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    form: {
+      name: string;
+      phone: string;
+      phonePlaceholder: string;
+      message: string;
+      messagePlaceholder: string;
+      submit: string;
+      submitting: string;
+      privacy: string;
+      invalidName: string;
+      invalidPhone: string;
+      invalidMessage: string;
+      rateLimited: string;
+      failed: string;
+      successTitle: string;
+      successDesc: string;
+      sendAnother: string;
+    };
+  };
   emergency: { title: string; text: string; call: string };
   footer: { tagline: string; explore: string; contact: string; location: string; rights: string; disclaimer: string };
   mobileBar: { whatsapp: string; call: string };

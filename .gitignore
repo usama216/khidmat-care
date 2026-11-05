@@ -13,6 +13,14 @@ next-env.d.ts
 .env.*
 !.env.example
 
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # Deploy tooling
 .vercel
 .wrangler
@@ -24,3 +32,6 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Private business documents
+khidmat-care-PRD.md

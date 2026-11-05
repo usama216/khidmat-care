@@ -1,0 +1,11 @@
+.venv
+.env
+.env.*
+!.env.example
+tests
+migrations
+alembic.ini
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__

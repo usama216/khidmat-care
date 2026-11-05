@@ -46,7 +46,7 @@ export function Header({ t }: { t: Dictionary }) {
       <div className="shell flex h-[4.25rem] items-center justify-between gap-4">
         <Logo href={home} />
 
-        <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-1 xl:flex">
           {t.nav.links.map((link) => (
             <a
               key={link.href}
@@ -93,7 +93,7 @@ export function Header({ t }: { t: Dictionary }) {
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? t.nav.closeMenu : t.nav.openMenu}
-            className="grid size-10 place-items-center rounded-full text-stone-800 ring-1 ring-stone-300/80 transition hover:bg-white lg:hidden"
+            className="grid size-10 place-items-center rounded-full text-stone-800 ring-1 ring-stone-300/80 transition hover:bg-white xl:hidden"
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
@@ -103,7 +103,7 @@ export function Header({ t }: { t: Dictionary }) {
       <div
         id="mobile-nav"
         hidden={!open}
-        className="h-[calc(100dvh-4.25rem)] overflow-y-auto border-t border-stone-200/80 bg-sand-50 lg:hidden"
+        className="h-[calc(100dvh-4.25rem)] overflow-y-auto border-t border-stone-200/80 bg-sand-50 xl:hidden"
       >
         <nav aria-label="Mobile" className="shell flex flex-col gap-1 py-6">
           {[...t.nav.links, { href: "#physios", label: t.nav.physios }].map((link) => (

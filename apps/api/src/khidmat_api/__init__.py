@@ -1,0 +1,1 @@
+"""Khidmat Care core API."""

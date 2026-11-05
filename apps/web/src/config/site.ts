@@ -11,6 +11,8 @@ const phone = env(process.env.NEXT_PUBLIC_PHONE, "+923000080216");
 export const site = {
   name: "Khidmat Care",
   url: env(process.env.NEXT_PUBLIC_SITE_URL, "https://khidmat.care").replace(/\/+$/, ""),
+  // The backend's base URL, no trailing slash.
+  apiUrl: env(process.env.NEXT_PUBLIC_API_URL, "http://localhost:8001").replace(/\/+$/, ""),
   // Off by default so test deployments (e.g. *.vercel.app) never end up in Google.
   allowIndexing: process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true",
 
