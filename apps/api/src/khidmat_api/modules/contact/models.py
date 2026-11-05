@@ -1,5 +1,6 @@
 """Messages sent through the public contact form."""
 
+from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import Index, String, Text
@@ -29,3 +30,4 @@ class ContactMessage(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     )
     # A keyed hash is enough for rate limiting, so the raw IP address is never stored.
     ip_hash: Mapped[str] = mapped_column(String(64))
+    handled_at: Mapped[datetime | None]

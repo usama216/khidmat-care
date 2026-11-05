@@ -15,6 +15,8 @@ CommaSeparated = Annotated[list[str], NoDecode]
 
 
 _LOCAL_IP_HASH_SECRET = "local-development-only"  # noqa: S105
+_LOCAL_JWT_SECRET = "local-development-only-jwt-signing-secret"  # noqa: S105
+_MIN_JWT_SECRET_LENGTH = 32
 
 
 class Environment(StrEnum):
@@ -46,7 +48,10 @@ class Settings(BaseSettings):
     ip_hash_secret: SecretStr = SecretStr(_LOCAL_IP_HASH_SECRET)
     contact_rate_limit_per_hour: int = Field(default=5, ge=1)
 
-    seed_admin_phone: str | None = None
+    # Signs access tokens. Required when deployed.
+    jwt_secret: SecretStr = SecretStr(_LOCAL_JWT_SECRET)
+    access_token_minutes: int = Field(default=15, ge=1, le=60)
+    refresh_token_days: int = Field(default=14, ge=1, le=60)
 
     @field_validator("cors_origins", "allowed_hosts", mode="before")
     @classmethod
@@ -71,11 +76,18 @@ class Settings(BaseSettings):
                 raise ValueError("ALLOWED_HOSTS cannot contain * when deployed")
             if self.ip_hash_secret.get_secret_value() == _LOCAL_IP_HASH_SECRET:
                 raise ValueError("IP_HASH_SECRET must be set when deployed")
+            secret = self.jwt_secret.get_secret_value()
+            if secret == _LOCAL_JWT_SECRET or len(secret) < _MIN_JWT_SECRET_LENGTH:
+                raise ValueError("JWT_SECRET must be a long random value when deployed")
         return self
 
     @property
     def docs_enabled(self) -> bool:
         return self.environment is not Environment.PRODUCTION
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.environment in {Environment.STAGING, Environment.PRODUCTION}
 
     @property
     def json_logs(self) -> bool:

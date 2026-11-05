@@ -28,6 +28,12 @@ uv run uvicorn khidmat_api.main:create_app --factory --reload --port 8001
 - API docs: http://localhost:8001/docs (off in production)
 - Liveness: `/healthz`. Readiness, including the database: `/readyz`
 
+To sign in to the admin dashboard, create an account. The password is asked for in a hidden prompt:
+
+```bash
+uv run python -m khidmat_api.create_admin
+```
+
 ## Checks
 
 ```bash
@@ -61,6 +67,7 @@ Set the Vercel project's Root Directory to `apps/api`. `app.py` is the entrypoin
 | `ALLOWED_HOSTS` | The API's own host name, no `https://` |
 | `CLIENT_IP_HEADER` | `x-forwarded-for` |
 | `IP_HASH_SECRET` | A long random value, see `.env.example` |
+| `JWT_SECRET` | A different long random value |
 
 Migrations don't run on Vercel. Run `uv run alembic upgrade head` from your machine with `DATABASE_URL` pointing at the production database.
 

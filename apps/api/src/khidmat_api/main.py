@@ -12,8 +12,13 @@ from khidmat_api.core.database import create_engine, create_session_factory
 from khidmat_api.core.errors import register_error_handlers
 from khidmat_api.core.logging import configure_logging
 from khidmat_api.core.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from khidmat_api.modules.admin.router import router as admin_router
+from khidmat_api.modules.audit.router import router as audit_admin_router
+from khidmat_api.modules.catalog.admin_router import router as catalog_admin_router
+from khidmat_api.modules.contact.admin_router import router as contact_admin_router
 from khidmat_api.modules.contact.router import router as contact_router
 from khidmat_api.modules.health.router import router as health_router
+from khidmat_api.modules.identity.router import router as auth_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -48,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=True,  # Auth uses HttpOnly cookies.
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "X-Request-ID"],
+        expose_headers=["X-Request-ID"],
     )
 
     register_error_handlers(app)
@@ -56,7 +62,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
 
     api_v1 = APIRouter(prefix=API_V1_PREFIX)
+    api_v1.include_router(auth_router)
     api_v1.include_router(contact_router)
+    api_v1.include_router(admin_router)
+    api_v1.include_router(contact_admin_router)
+    api_v1.include_router(catalog_admin_router)
+    api_v1.include_router(audit_admin_router)
     app.include_router(api_v1)
 
     return app

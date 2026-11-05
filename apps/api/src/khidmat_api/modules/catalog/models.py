@@ -5,7 +5,16 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -51,6 +60,13 @@ class ServicePackage(UUIDPrimaryKeyMixin, Base):
         CheckConstraint("sessions_count > 0", name="sessions_count_positive"),
         CheckConstraint("price_pkr >= 0", name="price_not_negative"),
         Index("ix_service_packages_service_type_id_is_active", "service_type_id", "is_active"),
+        Index(
+            "uq_service_packages_one_active_per_size",
+            "service_type_id",
+            "sessions_count",
+            unique=True,
+            postgresql_where=text("is_active"),
+        ),
     )
 
     service_type_id: Mapped[UUID] = mapped_column(ForeignKey("service_types.id"))

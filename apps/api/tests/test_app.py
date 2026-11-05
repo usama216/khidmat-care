@@ -112,7 +112,10 @@ async def test_docs_are_available_outside_production(client: AsyncClient) -> Non
 
 def test_docs_are_disabled_in_production(database_url: str) -> None:
     settings = build_settings(
-        database_url, environment=Environment.PRODUCTION, ip_hash_secret="test-secret"
+        database_url,
+        environment=Environment.PRODUCTION,
+        ip_hash_secret="test-secret",
+        jwt_secret="x" * 48,
     )
     app = create_app(settings)
     assert app.docs_url is None

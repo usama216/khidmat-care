@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.config import Settings
 from khidmat_api.core.errors import RateLimitedError
-from khidmat_api.modules.contact.models import ContactMessage
+from khidmat_api.modules.contact.models import ContactMessage, ContactMessageStatus
 from khidmat_api.modules.contact.schemas import ContactMessageCreate
 
 logger = structlog.get_logger("khidmat.contact")
@@ -54,3 +54,21 @@ async def submit_contact_message(
     )
     await session.commit()
     logger.info("contact_message_received", locale=payload.locale)  # No personal data in logs.
+
+
+async def count_new_messages(session: AsyncSession) -> int:
+    count = await session.scalar(
+        select(func.count())
+        .select_from(ContactMessage)
+        .where(ContactMessage.status == ContactMessageStatus.NEW)
+    )
+    return count or 0
+
+
+async def count_recent_messages(session: AsyncSession, *, days: int) -> int:
+    count = await session.scalar(
+        select(func.count())
+        .select_from(ContactMessage)
+        .where(ContactMessage.created_at > datetime.now(UTC) - timedelta(days=days))
+    )
+    return count or 0

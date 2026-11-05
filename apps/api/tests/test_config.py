@@ -28,12 +28,28 @@ def test_splits_comma_separated_lists(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.parametrize("field", ["cors_origins", "allowed_hosts"])
 def test_rejects_wildcards_when_deployed(environment: Environment, field: str) -> None:
     with pytest.raises(ValidationError, match="cannot contain"):
-        _settings(environment=environment, ip_hash_secret="test-secret", **{field: ["*"]})
+        _settings(
+            environment=environment,
+            ip_hash_secret="test-secret",
+            jwt_secret="x" * 48,
+            **{field: ["*"]},
+        )
 
 
 def test_only_deployed_environments_use_json_logs() -> None:
     assert _settings(environment=Environment.LOCAL).json_logs is False
     assert (
-        _settings(environment=Environment.PRODUCTION, ip_hash_secret="test-secret").json_logs
+        _settings(
+            environment=Environment.PRODUCTION, ip_hash_secret="test-secret", jwt_secret="x" * 48
+        ).json_logs
         is True
     )
+
+
+@pytest.mark.parametrize("secret", [None, "too-short"])
+def test_deployed_settings_require_a_real_jwt_secret(secret: str | None) -> None:
+    values: dict[str, object] = {"environment": Environment.PRODUCTION, "ip_hash_secret": "s"}
+    if secret:
+        values["jwt_secret"] = secret
+    with pytest.raises(ValidationError, match="JWT_SECRET"):
+        _settings(**values)

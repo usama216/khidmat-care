@@ -36,6 +36,10 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     role: Mapped[Role] = mapped_column(enum_type(Role, "role"), default=Role.PATIENT)
     locale: Mapped[Locale] = mapped_column(enum_type(Locale, "locale"), default=Locale.EN)
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Staff sign in with email and password. Patients and providers will use phone OTP.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    failed_login_count: Mapped[int] = mapped_column(default=0, server_default="0")
+    locked_until: Mapped[datetime | None]
 
 
 class OtpCode(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
