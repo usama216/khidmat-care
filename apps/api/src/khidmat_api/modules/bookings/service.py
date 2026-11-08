@@ -563,10 +563,13 @@ async def list_bookings(
     booked_by: UUID | None = None,
     provider_id: UUID | None = None,
     status: BookingStatus | None = None,
+    number: int | None = None,
     offset: int,
     limit: int,
 ) -> tuple[list[Booking], int]:
     filters: list[Any] = []
+    if number is not None:
+        filters.append(Booking.number == number)
     if booked_by is not None:
         filters.append(Booking.booked_by_id == booked_by)
     if provider_id is not None:

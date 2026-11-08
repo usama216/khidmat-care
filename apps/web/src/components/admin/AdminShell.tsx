@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarCheck,
+  Contact,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -33,6 +34,7 @@ const NAV: { href: string; label: string; icon: LucideIcon; permission: string }
   { href: "/admin/", label: "Overview", icon: LayoutDashboard, permission: "dashboard.view" },
   { href: "/admin/bookings/", label: "Orders", icon: CalendarCheck, permission: "bookings.manage" },
   { href: "/admin/providers/", label: "Physiotherapists", icon: Stethoscope, permission: "providers.verify" },
+  { href: "/admin/patients/", label: "Patients", icon: Contact, permission: "bookings.manage" },
   { href: "/admin/balances/", label: "Balances", icon: Wallet, permission: "finance.manage" },
   { href: "/admin/complaints/", label: "Complaints", icon: MessageSquareWarning, permission: "complaints.manage" },
   { href: "/admin/messages/", label: "Messages", icon: Inbox, permission: "messages.manage" },
@@ -91,7 +93,9 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const signOut = () => logout.mutate(undefined, { onSettled: () => router.replace("/admin/login/") });
   const newMessages = overview.data?.new_messages ?? 0;
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  const page = NAV.find((item) => item.href === normalized);
+  // Record pages such as /admin/bookings/view/ belong to their section.
+  const page = NAV.filter((item) => item.href === normalized || (item.href !== "/admin/" && normalized.startsWith(item.href)))
+    .sort((a, b) => b.href.length - a.href.length)[0];
   const denied = page !== undefined && !user.permissions.includes(page.permission);
 
   const sidebar = (
@@ -105,7 +109,7 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
       </div>
       <nav aria-label="Admin" className="flex-1 space-y-0.5 p-3">
         {NAV.filter((item) => !locked && user.permissions.includes(item.permission)).map(({ href, label, icon: Icon }) => {
-          const active = normalized === href;
+          const active = page?.href === href;
           return (
             <Link
               key={href}

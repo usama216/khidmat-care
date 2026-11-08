@@ -121,6 +121,40 @@ export type WalletTransaction = {
   balance_after_pkr: number;
   note: string | null;
   created_at: string;
+  booking_id: string | null;
+  booking_number: number | null;
+  session_sequence: number | null;
+};
+
+export type UpcomingSession = {
+  session_id: string;
+  booking_id: string;
+  booking_number: number;
+  sequence: number;
+  sessions_count: number;
+  scheduled_at: string;
+  status: SessionView["status"];
+  patient_name: string;
+  area_name: string;
+  service_name: string;
+};
+
+export type ProviderDashboard = {
+  status: ProviderProfile["status"];
+  balance_pkr: number;
+  minimum_balance_pkr: number;
+  can_accept_orders: boolean;
+  rating_avg: number;
+  rating_count: number;
+  new_offers: number;
+  active_orders: number;
+  sessions_today: number;
+  sessions_upcoming: number;
+  sessions_completed: number;
+  completed_this_month: number;
+  collected_this_month_pkr: number;
+  commission_this_month_pkr: number;
+  upcoming: UpcomingSession[];
 };
 export type Topup = {
   id: string;
@@ -140,6 +174,7 @@ const KEYS = {
   profile: ["provider", "profile"] as const,
   jobs: ["provider", "jobs"] as const,
   wallet: ["provider", "wallet"] as const,
+  dashboard: ["provider", "dashboard"] as const,
 };
 
 export function useCatalog() {
@@ -286,6 +321,15 @@ export function useSubmitApplication() {
 
 export function useSaveAvailability() {
   return useProviderMutation((slots: AvailabilitySlot[]) => apiPut("/provider/availability", { slots }));
+}
+
+export function useProviderDashboard(enabled: boolean) {
+  return useQuery<ProviderDashboard, ApiError>({
+    queryKey: KEYS.dashboard,
+    queryFn: () => apiGet<ProviderDashboard>("/provider/dashboard"),
+    enabled,
+    refetchInterval: 60_000, // New offers appear without a reload.
+  });
 }
 
 export function useJobs(enabled: boolean) {

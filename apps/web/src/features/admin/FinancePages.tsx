@@ -22,9 +22,9 @@ import {
 import { ReasonDialog } from "@/features/portal/shared";
 import { cn } from "@/lib/cn";
 import { formatPkr } from "@/lib/format";
-import { storageUrl } from "@/lib/upload";
+import { RecordLink } from "@/components/admin/records";
+import { physioHref } from "./BookingsPage";
 import {
-  fileUrl,
   useReviewTopup,
   useSaveSettings,
   useSettings,
@@ -32,6 +32,7 @@ import {
   type PlatformSettings,
   type TopupRow,
 } from "./operationsApi";
+import { useOpenFile } from "./useOpenFile";
 
 const FILTERS: { value: TopupRow["status"] | undefined; label: string }[] = [
   { value: "PENDING", label: "To review" },
@@ -97,44 +98,52 @@ export function FinancePage() {
   );
 }
 
+export function TopupStatusBadge({ status }: { status: TopupRow["status"] }) {
+  if (status === "PENDING") {
+    return (
+      <Badge tone="attention" icon={Clock}>
+        To review
+      </Badge>
+    );
+  }
+  if (status === "APPROVED") {
+    return (
+      <Badge tone="good" icon={BadgeCheck}>
+        Approved
+      </Badge>
+    );
+  }
+  return <Badge icon={X}>Rejected</Badge>;
+}
+
 function TopupItem({ topup }: { topup: TopupRow }) {
   const review = useReviewTopup();
   const [rejecting, setRejecting] = useState(false);
-  const [proofError, setProofError] = useState<string | null>(null);
-
-  const viewProof = async () => {
-    setProofError(null);
-    const tab = window.open("", "_blank");
-    try {
-      const { url } = await fileUrl(topup.proof_file_id);
-      if (tab) tab.location.href = storageUrl(url);
-    } catch (error) {
-      tab?.close();
-      setProofError(errorMessage(error, "The proof couldn't be opened."));
-    }
-  };
+  const proof = useOpenFile("The proof couldn't be opened.");
+  const proofError = proof.error;
+  const viewProof = () => proof.open(topup.proof_file_id);
 
   return (
     <li className="p-4 sm:px-5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="min-w-48 flex-1 text-sm">
-          <p className="font-semibold text-stone-900 tabular-nums">{formatPkr(topup.amount_pkr)}</p>
+          <p className="font-semibold text-stone-900 tabular-nums">
+            {formatPkr(topup.amount_pkr)}
+            <span className="font-normal text-stone-500"> from </span>
+            <RecordLink href={physioHref(topup.provider_id)}>{topup.provider_name ?? "a physiotherapist"}</RecordLink>
+          </p>
           <p className="text-xs text-stone-500">
             {topup.method} · {topup.reference} · {formatDateTime(topup.created_at)}
           </p>
+          {topup.reviewed_at ? (
+            <p className="text-xs text-stone-500">
+              Reviewed {formatDateTime(topup.reviewed_at)}
+              {topup.reviewed_by_name ? ` by ${topup.reviewed_by_name}` : ""}
+            </p>
+          ) : null}
           {topup.reject_reason ? <p className="mt-0.5 text-xs text-red-700">{topup.reject_reason}</p> : null}
         </div>
-        {topup.status === "PENDING" ? (
-          <Badge tone="attention" icon={Clock}>
-            To review
-          </Badge>
-        ) : topup.status === "APPROVED" ? (
-          <Badge tone="good" icon={BadgeCheck}>
-            Approved
-          </Badge>
-        ) : (
-          <Badge icon={X}>Rejected</Badge>
-        )}
+        <TopupStatusBadge status={topup.status} />
         <button type="button" onClick={() => void viewProof()} className={adminButton("secondary")}>
           Proof
           <ExternalLink className="size-3.5" aria-hidden="true" />

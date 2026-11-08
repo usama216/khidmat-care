@@ -14,6 +14,7 @@ from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
 from khidmat_api.core.storage import Storage
 from khidmat_api.modules.audit.service import record_audit
+from khidmat_api.modules.bookings.admin_detail import provider_booking_stats
 from khidmat_api.modules.bookings.service import busy_times
 from khidmat_api.modules.catalog.settings_service import get_platform_settings
 from khidmat_api.modules.files.router import StorageDep
@@ -155,7 +156,20 @@ class ProviderAdminRow(BaseModel):
     submitted_at: datetime | None
 
 
+class ProviderStats(BaseModel):
+    sessions_completed: int
+    sessions_cancelled: int
+    orders_total: int
+    orders_active: int
+    offers_rejected: int
+
+
 class ProviderAdminDetail(ProviderAdminRow):
+    user_id: UUID
+    rating_count: int
+    joined_at: datetime
+    approved_at: datetime | None
+    stats: ProviderStats
     cnic: str
     status_reason: str | None
     bio: str | None
@@ -397,6 +411,11 @@ async def detail_admin(
     availability = await get_availability(session, provider.id)
     view = ProviderAdminDetail(
         **_admin_row(provider, user).model_dump(),
+        user_id=user.id,
+        rating_count=provider.rating_count,
+        joined_at=provider.created_at,
+        approved_at=provider.approved_at,
+        stats=ProviderStats(**await provider_booking_stats(session, provider.id)),
         cnic=reveal_cnic(provider, settings),
         status_reason=provider.status_reason,
         bio=provider.bio,

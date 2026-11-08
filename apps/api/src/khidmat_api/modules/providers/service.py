@@ -16,6 +16,7 @@ from khidmat_api.core.config import Settings
 from khidmat_api.core.crypto import decrypt_text, encrypt_text, keyed_hash
 from khidmat_api.core.enums import Gender
 from khidmat_api.core.errors import ConflictError, NotFoundError
+from khidmat_api.core.phone import like_patterns
 from khidmat_api.modules.audit.service import record_audit
 from khidmat_api.modules.files.models import FilePurpose
 from khidmat_api.modules.files.service import require_owned_file
@@ -247,12 +248,13 @@ async def list_providers_admin(
     filters: list[Any] = []
     if status is not None:
         filters.append(Provider.status == status)
-    if search and search.strip():
-        pattern = (
-            "%" + search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-        )
+    patterns = like_patterns(search or "")
+    if patterns:
         filters.append(
-            or_(User.name.ilike(pattern, escape="\\"), User.phone.ilike(pattern, escape="\\"))
+            or_(
+                *(User.name.ilike(pattern, escape="\\") for pattern in patterns),
+                *(User.phone.ilike(pattern, escape="\\") for pattern in patterns),
+            )
         )
     base = select(Provider, User).join(User, User.id == Provider.user_id).where(*filters)
     total = await session.scalar(

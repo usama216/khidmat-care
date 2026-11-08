@@ -57,6 +57,7 @@ export type AuditEntry = {
   metadata: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
+  actor_name: string | null;
 };
 
 export const STAFF_ROLES = ["ADMIN", "OPERATIONS", "VERIFICATION", "FINANCE", "SUPPORT"] as const;
@@ -200,6 +201,16 @@ export function useAuditLogs(page: number) {
     queryKey: [...KEYS.audit, page],
     queryFn: () => apiGet<Page<AuditEntry>>("/admin/audit-logs", { page, page_size: 25 }),
     placeholderData: keepPreviousData,
+  });
+}
+
+/** One record's change history. Only loads for staff who may read the audit log. */
+export function useRecordHistory(entityType: string, entityId: string | null, enabled: boolean) {
+  return useQuery<Page<AuditEntry>, ApiError>({
+    queryKey: [...KEYS.audit, entityType, entityId],
+    queryFn: () =>
+      apiGet<Page<AuditEntry>>("/admin/audit-logs", { entity_type: entityType, entity_id: entityId ?? undefined, page_size: 50 }),
+    enabled: enabled && Boolean(entityId),
   });
 }
 

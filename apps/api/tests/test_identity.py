@@ -152,6 +152,8 @@ MESSAGES = f"{ADMIN}/contact-messages"
 CATALOG = f"{ADMIN}/catalog"
 BOOKINGS = f"{ADMIN}/bookings"
 COMPLAINTS = (f"{ADMIN}/complaints", f"{ADMIN}/low-ratings")
+REVIEWS = f"{ADMIN}/reviews"
+PATIENTS = f"{ADMIN}/patients"
 PROVIDERS = f"{ADMIN}/providers"
 FINANCE = (f"{ADMIN}/wallet", f"{ADMIN}/settings")
 
@@ -159,9 +161,9 @@ FINANCE = (f"{ADMIN}/wallet", f"{ADMIN}/settings")
 @pytest.mark.parametrize(
     ("role", "allowed_prefix"),
     [
-        (Role.OPERATIONS, (OVERVIEW, MESSAGES, CATALOG, BOOKINGS, *COMPLAINTS)),
-        (Role.SUPPORT, (OVERVIEW, MESSAGES, BOOKINGS, *COMPLAINTS)),
-        (Role.VERIFICATION, (OVERVIEW, PROVIDERS)),
+        (Role.OPERATIONS, (OVERVIEW, MESSAGES, CATALOG, BOOKINGS, PATIENTS, *COMPLAINTS, REVIEWS)),
+        (Role.SUPPORT, (OVERVIEW, MESSAGES, BOOKINGS, PATIENTS, *COMPLAINTS, REVIEWS)),
+        (Role.VERIFICATION, (OVERVIEW, PROVIDERS, REVIEWS)),
         (Role.FINANCE, (OVERVIEW, *FINANCE)),
         (Role.PROVIDER, ()),
         (Role.PATIENT, ()),

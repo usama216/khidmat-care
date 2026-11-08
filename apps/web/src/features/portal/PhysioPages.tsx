@@ -21,6 +21,7 @@ import {
   TableSkeleton,
 } from "@/components/admin/ui";
 import type { ApiError } from "@/lib/api";
+import { Tabs } from "@/components/admin/records";
 import { formatPkr } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { DOCUMENT_ACCEPT, IMAGE_ACCEPT, storageUrl, uploadFile, type FilePurpose } from "@/lib/upload";
@@ -48,15 +49,11 @@ import {
   type SessionView,
 } from "./api";
 import { minuteLabel } from "./FindPage";
-import { PortalPage, RequireRole } from "./PortalShell";
 import { BookingStatusBadge, ContactLine, ReasonDialog, SessionStatusBadge } from "./shared";
 
+// The physio layout provides the sidebar and checks the role, so pages only render their content.
 function PhysioPage({ children }: { children: ReactNode }) {
-  return (
-    <PortalPage>
-      <RequireRole role="PROVIDER">{() => children}</RequireRole>
-    </PortalPage>
-  );
+  return <>{children}</>;
 }
 
 function FileButton({
@@ -168,21 +165,34 @@ export function PhysioJobsPage() {
   );
 }
 
+type JobTab = "offers" | "active" | "past";
+
+const EMPTY_TAB: Record<JobTab, { title: string; description: string }> = {
+  offers: { title: "No new offers", description: "When a patient chooses you, the order appears here for you to accept." },
+  active: { title: "No active orders", description: "Orders you accept stay here until every session is done." },
+  past: { title: "Nothing here yet", description: "Completed and cancelled orders are kept here." },
+};
+
 function JobsContent() {
   const profile = useProviderProfile();
   const jobs = useJobs(Boolean(profile.data));
   const wallet = useWallet(Boolean(profile.data));
   const items = jobs.data?.items ?? [];
-  const offers = items.filter((job) => job.status === "AWAITING_ACCEPTANCE");
-  const active = items.filter((job) => job.status === "ACTIVE");
-  const past = items.filter((job) => job.status === "COMPLETED" || job.status === "CANCELLED");
+  const groups: Record<JobTab, BookingView[]> = {
+    offers: items.filter((job) => job.status === "AWAITING_ACCEPTANCE"),
+    active: items.filter((job) => job.status === "ACTIVE"),
+    past: items.filter((job) => job.status === "COMPLETED" || job.status === "CANCELLED"),
+  };
+  const [chosen, setChosen] = useState<JobTab | null>(null);
+  // Opens on new offers when there are some, otherwise on active work.
+  const tab: JobTab = chosen ?? (groups.offers.length > 0 ? "offers" : "active");
 
   if (profile.isPending) return <Skeleton className="h-40 w-full" />;
   if (profile.isError) return <ErrorState onRetry={() => void profile.refetch()} />;
 
   return (
     <>
-      <PageHeader title="Jobs" />
+      <PageHeader title="Jobs" description="Accept new orders, and update each session as you go." />
       <ApplicationBanner profile={profile.data} />
       {wallet.data && !wallet.data.can_accept_orders && profile.data?.status === "APPROVED" ? (
         <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
@@ -202,33 +212,35 @@ function JobsContent() {
           <Card className="mt-4">
             <ErrorState onRetry={() => void jobs.refetch()} />
           </Card>
-        ) : items.length === 0 ? (
-          <Card className="mt-4">
-            <EmptyState title="No jobs yet" description="New orders from patients will appear here." />
-          </Card>
         ) : (
-          <div className="mt-4 space-y-5">
-            <JobGroup title="New offers" jobs={offers} />
-            <JobGroup title="Active" jobs={active} />
-            <JobGroup title="Past" jobs={past} />
-          </div>
+          <>
+            <div className="mt-5">
+              <Tabs
+                label="Jobs"
+                value={tab}
+                onChange={setChosen}
+                tabs={[
+                  { value: "offers", label: "New offers", count: groups.offers.length },
+                  { value: "active", label: "Active", count: groups.active.length },
+                  { value: "past", label: "Past" },
+                ]}
+              />
+            </div>
+            {groups[tab].length === 0 ? (
+              <Card className="mt-4">
+                <EmptyState title={EMPTY_TAB[tab].title} description={EMPTY_TAB[tab].description} />
+              </Card>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {groups[tab].map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+            )}
+          </>
         )
       ) : null}
     </>
-  );
-}
-
-function JobGroup({ title, jobs }: { title: string; jobs: BookingView[] }) {
-  if (jobs.length === 0) return null;
-  return (
-    <section>
-      <h2 className="text-sm font-semibold text-stone-600">{title}</h2>
-      <div className="mt-2 space-y-3">
-        {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -955,19 +967,29 @@ function BalanceContent() {
           </button>
         }
       />
-      <Card className="mt-4 p-5">
-        <p className="text-sm text-stone-600">Your balance</p>
-        <p className="mt-1 text-3xl font-semibold tracking-tight text-stone-900 tabular-nums">
+      <div
+        className={cn(
+          "mt-4 rounded-2xl p-6 text-white shadow-sm",
+          wallet.data && !wallet.data.can_accept_orders
+            ? "bg-linear-to-br from-amber-600 to-amber-700"
+            : "bg-linear-to-br from-brand-700 to-brand-900",
+        )}
+      >
+        <p className="text-sm font-medium text-white/80">Your balance</p>
+        <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums">
           {wallet.data ? formatPkr(wallet.data.balance_pkr) : "-"}
         </p>
-        <p className="mt-1 text-sm text-stone-500">
+        <p className="mt-2 text-sm text-white/85">
           {wallet.data
             ? wallet.data.can_accept_orders
               ? `You can accept orders. The minimum is ${formatPkr(wallet.data.minimum_balance_pkr)}.`
               : `Top up to at least ${formatPkr(wallet.data.minimum_balance_pkr)} to accept new orders.`
             : ""}
         </p>
-      </Card>
+        <p className="mt-4 text-xs text-white/70">
+          Patients pay you in cash. Our commission is deducted from this balance after each completed session.
+        </p>
+      </div>
       {topups.data && topups.data.items.length > 0 ? (
         <Card className="mt-4">
           <h2 className="border-b border-stone-200 p-4 text-sm font-semibold text-stone-900">Top-up requests</h2>
@@ -992,7 +1014,15 @@ function BalanceContent() {
             {history.data.items.map((row) => (
               <li key={row.id} className="flex items-center justify-between gap-3 p-4 text-sm">
                 <span>
-                  <span className="font-medium text-stone-900">{TRANSACTION_LABEL[row.type]}</span>
+                  <span className="font-medium text-stone-900">
+                    {TRANSACTION_LABEL[row.type]}
+                    {row.booking_number ? (
+                      <span className="font-normal text-stone-500">
+                        {" "}
+                        · KC-{row.booking_number}, session {row.session_sequence}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="block text-xs text-stone-500">{formatDateTime(row.created_at)}</span>
                   {row.note ? <span className="block text-xs text-stone-500">{row.note}</span> : null}
                 </span>

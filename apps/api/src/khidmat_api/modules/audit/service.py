@@ -33,11 +33,22 @@ def record_audit(
 
 
 async def list_audit_logs(
-    session: AsyncSession, *, offset: int, limit: int
+    session: AsyncSession,
+    *,
+    offset: int,
+    limit: int,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
 ) -> tuple[list[AuditLog], int]:
-    total = await session.scalar(select(func.count()).select_from(AuditLog))
+    filters = []
+    if entity_type is not None:
+        filters.append(AuditLog.entity_type == entity_type)
+    if entity_id is not None:
+        filters.append(AuditLog.entity_id == entity_id)
+    total = await session.scalar(select(func.count()).select_from(AuditLog).where(*filters))
     rows = await session.scalars(
         select(AuditLog)
+        .where(*filters)
         .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
         .offset(offset)
         .limit(limit)

@@ -10,7 +10,9 @@ import {
   Pagination,
   TableSkeleton,
 } from "@/components/admin/ui";
+import { RecordLink } from "@/components/admin/records";
 import { useAuditLogs } from "./api";
+import { orderHref, physioHref } from "./BookingsPage";
 
 const ACTION_LABELS: Record<string, string> = {
   "auth.login": "Signed in",
@@ -42,6 +44,11 @@ const ACTION_LABELS: Record<string, string> = {
   "session.cancelled": "Session cancelled by staff",
   "session.no_show": "Session marked no-show",
   "complaint.updated": "Complaint updated",
+};
+
+const RECORD_LINKS: Record<string, (id: string) => string> = {
+  provider: physioHref,
+  booking: orderHref,
 };
 
 export function AuditPage() {
@@ -81,8 +88,17 @@ export function AuditPage() {
                 <tbody className="divide-y divide-stone-100">
                   {logs.data.items.map((entry) => (
                     <tr key={entry.id}>
-                      <td className="px-5 py-3 font-medium text-stone-900">
-                        {ACTION_LABELS[entry.action] ?? entry.action}
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-stone-900">{ACTION_LABELS[entry.action] ?? entry.action}</p>
+                        <p className="text-xs text-stone-500">
+                          {entry.actor_name ?? "System"}
+                          {RECORD_LINKS[entry.entity_type] ? (
+                            <>
+                              {" · "}
+                              <RecordLink href={RECORD_LINKS[entry.entity_type](entry.entity_id)}>Open record</RecordLink>
+                            </>
+                          ) : null}
+                        </p>
                       </td>
                       <td className="max-w-xs truncate px-5 py-3 text-xs text-stone-500">
                         {entry.metadata

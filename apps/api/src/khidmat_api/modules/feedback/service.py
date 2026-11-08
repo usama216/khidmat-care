@@ -1,6 +1,7 @@
 """Ratings after sessions, and complaints."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -68,14 +69,36 @@ async def create_complaint(
 
 
 async def list_complaints(
-    session: AsyncSession, *, status: ComplaintStatus | None, offset: int, limit: int
+    session: AsyncSession,
+    *,
+    status: ComplaintStatus | None,
+    offset: int,
+    limit: int,
+    booking_ids: list[UUID] | None = None,
 ) -> tuple[list[Complaint], int]:
-    filters = [Complaint.status == status] if status is not None else []
+    filters: list[Any] = [Complaint.status == status] if status is not None else []
+    if booking_ids is not None:
+        filters.append(Complaint.booking_id.in_(booking_ids))
     total = await session.scalar(select(func.count()).select_from(Complaint).where(*filters))
     rows = await session.scalars(
         select(Complaint)
         .where(*filters)
         .order_by(Complaint.created_at.desc(), Complaint.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(rows), total or 0
+
+
+async def list_reviews(
+    session: AsyncSession, *, provider_id: UUID | None, offset: int, limit: int
+) -> tuple[list[Review], int]:
+    filters = [Review.provider_id == provider_id] if provider_id is not None else []
+    total = await session.scalar(select(func.count()).select_from(Review).where(*filters))
+    rows = await session.scalars(
+        select(Review)
+        .where(*filters)
+        .order_by(Review.created_at.desc(), Review.id.desc())
         .offset(offset)
         .limit(limit)
     )

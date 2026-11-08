@@ -3,7 +3,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ApiError, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api";
 import type { Page } from "./api";
-import type { AvailabilitySlot, BookingStatus, BookingView } from "@/features/portal/api";
+import type {
+  AvailabilitySlot,
+  BookingStatus,
+  BookingView,
+  PatientPerson,
+  SessionView,
+} from "@/features/portal/api";
 
 export type ProviderStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
 
@@ -20,7 +26,20 @@ export type ProviderRow = {
   submitted_at: string | null;
 };
 
+export type ProviderStats = {
+  sessions_completed: number;
+  sessions_cancelled: number;
+  orders_total: number;
+  orders_active: number;
+  offers_rejected: number;
+};
+
 export type ProviderDetail = ProviderRow & {
+  user_id: string;
+  rating_count: number;
+  joined_at: string;
+  approved_at: string | null;
+  stats: ProviderStats;
   cnic: string;
   status_reason: string | null;
   bio: string | null;
@@ -44,25 +63,154 @@ export type StaffBooking = BookingView & {
 export type TopupRow = {
   id: string;
   provider_id: string;
+  provider_name: string | null;
+  provider_phone: string | null;
   amount_pkr: number;
   method: string;
   reference: string;
   proof_file_id: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reject_reason: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
   created_at: string;
 };
+
+export type LedgerRow = {
+  id: string;
+  type: "TOPUP" | "COMMISSION" | "ADJUSTMENT";
+  amount_pkr: number;
+  balance_after_pkr: number;
+  note: string | null;
+  created_at: string;
+  booking_id: string | null;
+  booking_number: number | null;
+  session_sequence: number | null;
+  created_by_name: string | null;
+};
+
+export type ComplaintStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED";
 
 export type ComplaintRow = {
   id: string;
   booking_id: string;
+  booking_number: number | null;
+  session_id: string | null;
+  session_sequence: number | null;
   text: string;
-  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED";
+  status: ComplaintStatus;
   resolution: string | null;
+  resolved_at: string | null;
+  raised_by_name: string | null;
+  raised_by_phone: string | null;
+  provider_id: string | null;
+  provider_name: string | null;
   created_at: string;
 };
 
-export type LowRating = { id: string; rating: number; comment: string | null; created_at: string; provider_id: string };
+export type Review = {
+  id: string;
+  session_id: string;
+  provider_id: string;
+  provider_name: string | null;
+  booking_id: string | null;
+  booking_number: number | null;
+  session_sequence: number | null;
+  reviewer_name: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+export type TimelineType =
+  | "ORDER_PLACED"
+  | "OFFERED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "WITHDRAWN"
+  | "SESSION"
+  | "RATED"
+  | "COMPLAINT_RAISED"
+  | "COMPLAINT_CLOSED"
+  | "ORDER_CANCELLED";
+
+export type StaffSessionDetail = {
+  id: string;
+  sequence: number;
+  provider_id: string;
+  provider_name: string | null;
+  scheduled_at: string;
+  status: SessionView["status"];
+  arrived_at: string | null;
+  completed_at: string | null;
+  pain_score: number | null;
+  notes: string | null;
+  cancel_reason: string | null;
+  price_pkr: number;
+  commission_pkr: number;
+  commission_charged: boolean;
+  rating: number | null;
+  review_comment: string | null;
+};
+
+export type StaffBookingDetail = {
+  booking: StaffBooking;
+  patient_id: string;
+  booked_by_id: string;
+  provider_id: string | null;
+  preferred_gender: "MALE" | "FEMALE" | null;
+  lat: number | null;
+  lng: number | null;
+  cancelled_at: string | null;
+  updated_at: string;
+  commission_total_pkr: number;
+  commission_charged_pkr: number;
+  sessions: StaffSessionDetail[];
+  assignments: {
+    provider_id: string;
+    provider_name: string | null;
+    status: "OFFERED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+    reject_reason: string | null;
+    offered_at: string;
+    responded_at: string | null;
+    assigned_by_name: string | null;
+  }[];
+  complaints: {
+    id: string;
+    text: string;
+    status: ComplaintStatus;
+    resolution: string | null;
+    created_at: string;
+    resolved_at: string | null;
+  }[];
+  timeline: {
+    at: string;
+    type: TimelineType;
+    actor_name: string | null;
+    session_sequence: number | null;
+    status: string | null;
+    note: string | null;
+  }[];
+};
+
+export type PatientAccountRow = {
+  id: string;
+  name: string | null;
+  phone: string;
+  is_active: boolean;
+  created_at: string;
+  people_count: number;
+  orders_count: number;
+};
+
+export type PatientAccountDetail = PatientAccountRow & {
+  email: string | null;
+  active_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  spent_pkr: number;
+  people: PatientPerson[];
+};
 
 export type PlatformSettings = {
   commission_bps: number | null;
@@ -74,7 +222,10 @@ const KEYS = {
   providers: ["admin", "providers"] as const,
   bookings: ["admin", "bookings"] as const,
   topups: ["admin", "topups"] as const,
+  ledger: ["admin", "ledger"] as const,
   complaints: ["admin", "complaints"] as const,
+  reviews: ["admin", "reviews"] as const,
+  patients: ["admin", "patients"] as const,
   settings: ["admin", "settings"] as const,
 };
 
@@ -149,11 +300,29 @@ export function fileUrl(fileId: string) {
   return apiGet<{ url: string }>(`/files/${fileId}/url`);
 }
 
-export function useAdminBookings(filters: { page: number; status?: BookingStatus }) {
+export type BookingFilters = {
+  page: number;
+  page_size?: number;
+  status?: BookingStatus;
+  search?: string;
+  provider_id?: string;
+  booked_by?: string;
+};
+
+export function useAdminBookings(filters: BookingFilters, enabled = true) {
   return useQuery<Page<StaffBooking>, ApiError>({
     queryKey: [...KEYS.bookings, filters],
     queryFn: () => apiGet<Page<StaffBooking>>("/admin/bookings", filters),
     placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function useBookingDetail(id: string | null) {
+  return useQuery<StaffBookingDetail, ApiError>({
+    queryKey: [...KEYS.bookings, "detail", id],
+    queryFn: () => apiGet<StaffBookingDetail>(`/admin/bookings/${id}`),
+    enabled: Boolean(id),
   });
 }
 
@@ -169,12 +338,32 @@ export function useCloseSession() {
   );
 }
 
-export function useTopups(filters: { page: number; status?: TopupRow["status"] }) {
+export function useTopups(
+  filters: { page: number; page_size?: number; status?: TopupRow["status"]; provider_id?: string },
+  enabled = true,
+) {
   return useQuery<Page<TopupRow>, ApiError>({
     queryKey: [...KEYS.topups, filters],
     queryFn: () => apiGet<Page<TopupRow>>("/admin/wallet/topups", filters),
     placeholderData: keepPreviousData,
+    enabled,
   });
+}
+
+export function useLedger(providerId: string, page: number, enabled = true) {
+  return useQuery<Page<LedgerRow>, ApiError>({
+    queryKey: [...KEYS.ledger, providerId, page],
+    queryFn: () =>
+      apiGet<Page<LedgerRow>>(`/admin/wallet/providers/${providerId}/transactions`, { page, page_size: 10 }),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function useAdjustBalance() {
+  return useAdminMutation(({ id, amount_pkr, note }: { id: string; amount_pkr: number; note: string }) =>
+    apiPost(`/admin/wallet/providers/${id}/adjust`, { amount_pkr, note }),
+  );
 }
 
 export function useReviewTopup() {
@@ -183,18 +372,47 @@ export function useReviewTopup() {
   );
 }
 
-export function useComplaints(filters: { page: number; status?: ComplaintRow["status"] }) {
+export function useComplaints(
+  filters: { page: number; page_size?: number; status?: ComplaintStatus; provider_id?: string },
+  enabled = true,
+) {
   return useQuery<Page<ComplaintRow>, ApiError>({
     queryKey: [...KEYS.complaints, filters],
     queryFn: () => apiGet<Page<ComplaintRow>>("/admin/complaints", filters),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
 export function useLowRatings() {
-  return useQuery<LowRating[], ApiError>({
+  return useQuery<Review[], ApiError>({
     queryKey: [...KEYS.complaints, "low-ratings"],
-    queryFn: () => apiGet<LowRating[]>("/admin/low-ratings"),
+    queryFn: () => apiGet<Review[]>("/admin/low-ratings"),
+  });
+}
+
+export function useReviews(filters: { page: number; provider_id?: string }, enabled = true) {
+  return useQuery<Page<Review>, ApiError>({
+    queryKey: [...KEYS.reviews, filters],
+    queryFn: () => apiGet<Page<Review>>("/admin/reviews", { ...filters, page_size: 10 }),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
+}
+
+export function usePatientAccounts(filters: { page: number; search?: string }) {
+  return useQuery<Page<PatientAccountRow>, ApiError>({
+    queryKey: [...KEYS.patients, filters],
+    queryFn: () => apiGet<Page<PatientAccountRow>>("/admin/patients", filters),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usePatientAccount(id: string | null) {
+  return useQuery<PatientAccountDetail, ApiError>({
+    queryKey: [...KEYS.patients, "detail", id],
+    queryFn: () => apiGet<PatientAccountDetail>(`/admin/patients/${id}`),
+    enabled: Boolean(id),
   });
 }
 

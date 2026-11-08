@@ -66,7 +66,14 @@ const TILES: Tile[] = [
     href: "/admin/messages/",
     permission: "messages.manage",
   },
-  { label: "Patients", value: (d) => d.patients, detail: () => "People booked for", icon: UsersRound },
+  {
+    label: "Patients",
+    value: (d) => d.patients,
+    detail: () => "People booked for",
+    icon: UsersRound,
+    href: "/admin/patients/",
+    permission: "bookings.manage",
+  },
   {
     label: "Active services",
     value: (d) => d.active_services,

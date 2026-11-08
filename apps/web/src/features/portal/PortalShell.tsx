@@ -15,7 +15,8 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/my/bookings/", label: "My orders" },
   ],
   PROVIDER: [
-    { href: "/physio/", label: "Jobs" },
+    { href: "/physio/", label: "Dashboard" },
+    { href: "/physio/jobs/", label: "Jobs" },
     { href: "/physio/availability/", label: "Availability" },
     { href: "/physio/balance/", label: "Balance" },
     { href: "/physio/profile/", label: "Profile" },

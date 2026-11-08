@@ -18,6 +18,13 @@ export function isStaff(user: CurrentUser | null | undefined) {
   return Boolean(user?.permissions.includes("dashboard.view"));
 }
 
+/** Whether the signed-in user holds a permission. Only hides UI; the API enforces it. */
+export function useCan() {
+  const me = useCurrentUser();
+  const permissions = me.data?.permissions ?? [];
+  return (permission: string) => permissions.includes(permission);
+}
+
 export const loginSchema = z.object({
   identifier: z.string().trim().min(3, "Enter your email or phone number."),
   password: z.string().min(1, "Enter your password."),

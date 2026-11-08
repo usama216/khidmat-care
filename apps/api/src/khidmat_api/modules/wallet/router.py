@@ -10,12 +10,15 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from khidmat_api.core.database import SessionDep
 from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
+from khidmat_api.modules.bookings.models import Booking, TreatmentSession
 from khidmat_api.modules.catalog.settings_service import get_platform_settings
 from khidmat_api.modules.identity.dependencies import (
     FinanceManagerDep,
     ProviderUserDep,
     SettingsDep,
 )
+from khidmat_api.modules.identity.models import User
+from khidmat_api.modules.providers.models import Provider
 from khidmat_api.modules.providers.service import require_provider_for_user
 from khidmat_api.modules.wallet.models import TopupRequest, TopupStatus, WalletTransaction
 from khidmat_api.modules.wallet.service import (
@@ -64,6 +67,25 @@ class TopupView(BaseModel):
     created_at: datetime
 
 
+class TopupAdminView(TopupView):
+    provider_name: str | None
+    provider_phone: str | None
+    reviewed_by_name: str | None
+    reviewed_at: datetime | None
+
+
+class TransactionDetailView(TransactionView):
+    """Names the order and session a commission was for."""
+
+    booking_id: UUID | None
+    booking_number: int | None
+    session_sequence: int | None
+
+
+class TransactionAdminView(TransactionDetailView):
+    created_by_name: str | None
+
+
 class TopupCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -102,13 +124,13 @@ async def my_wallet(user: ProviderUserDep, session: SessionDep) -> WalletSummary
 @self_router.get("/transactions", summary="Your balance history")
 async def my_transactions(
     user: ProviderUserDep, session: SessionDep, params: PageParamsDep
-) -> Page[TransactionView]:
+) -> Page[TransactionDetailView]:
     provider = await require_provider_for_user(session, user.id)
     rows, total = await list_transactions(
         session, provider.id, offset=params.offset, limit=params.page_size
     )
     return Page(
-        items=[TransactionView.model_validate(row) for row in rows],
+        items=[await _transaction_detail_view(session, row) for row in rows],
         total=total,
         page=params.page,
         page_size=params.page_size,
@@ -148,18 +170,64 @@ async def create_topup(
     return TopupView.model_validate(topup)
 
 
+async def _user_label(session: SessionDep, user_id: UUID | None) -> str | None:
+    if user_id is None:
+        return None
+    user = await session.get(User, user_id)
+    return (user.name or user.phone) if user else None
+
+
+async def _topup_admin_view(session: SessionDep, topup: TopupRequest) -> TopupAdminView:
+    provider = await session.get(Provider, topup.provider_id)
+    owner = await session.get(User, provider.user_id) if provider else None
+    return TopupAdminView(
+        **TopupView.model_validate(topup).model_dump(),
+        provider_name=owner.name if owner else None,
+        provider_phone=owner.phone if owner else None,
+        reviewed_by_name=await _user_label(session, topup.reviewed_by_id),
+        reviewed_at=topup.reviewed_at,
+    )
+
+
+async def _transaction_detail_view(
+    session: SessionDep, row: WalletTransaction
+) -> TransactionDetailView:
+    treatment = await session.get(TreatmentSession, row.session_id) if row.session_id else None
+    booking = await session.get(Booking, treatment.booking_id) if treatment else None
+    return TransactionDetailView(
+        **TransactionView.model_validate(row).model_dump(),
+        booking_id=booking.id if booking else None,
+        booking_number=booking.number if booking else None,
+        session_sequence=treatment.sequence if treatment else None,
+    )
+
+
+async def _transaction_admin_view(
+    session: SessionDep, row: WalletTransaction
+) -> TransactionAdminView:
+    return TransactionAdminView(
+        **(await _transaction_detail_view(session, row)).model_dump(),
+        created_by_name=await _user_label(session, row.created_by_id),
+    )
+
+
 @admin_router.get("/topups", summary="All top-up requests")
 async def all_topups(
     _: FinanceManagerDep,
     session: SessionDep,
     params: PageParamsDep,
     status: TopupStatus | None = None,
-) -> Page[TopupView]:
+    provider_id: UUID | None = None,
+) -> Page[TopupAdminView]:
     rows, total = await list_topups(
-        session, status=status, offset=params.offset, limit=params.page_size
+        session,
+        status=status,
+        provider_id=provider_id,
+        offset=params.offset,
+        limit=params.page_size,
     )
     return Page(
-        items=[TopupView.model_validate(row) for row in rows],
+        items=[await _topup_admin_view(session, row) for row in rows],
         total=total,
         page=params.page,
         page_size=params.page_size,
@@ -174,7 +242,7 @@ async def review(
     session: SessionDep,
     request: Request,
     settings: SettingsDep,
-) -> TopupView:
+) -> TopupAdminView:
     topup = await review_topup(
         session,
         topup_id,
@@ -183,18 +251,18 @@ async def review(
         actor=actor,
         ip_address=client_ip(request, settings),
     )
-    return TopupView.model_validate(topup)
+    return await _topup_admin_view(session, topup)
 
 
 @admin_router.get("/providers/{provider_id}/transactions", summary="A balance history")
 async def provider_transactions(
     provider_id: UUID, _: FinanceManagerDep, session: SessionDep, params: PageParamsDep
-) -> Page[TransactionView]:
+) -> Page[TransactionAdminView]:
     rows, total = await list_transactions(
         session, provider_id, offset=params.offset, limit=params.page_size
     )
     return Page(
-        items=[TransactionView.model_validate(row) for row in rows],
+        items=[await _transaction_admin_view(session, row) for row in rows],
         total=total,
         page=params.page,
         page_size=params.page_size,

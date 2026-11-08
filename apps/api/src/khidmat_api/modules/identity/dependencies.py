@@ -76,6 +76,17 @@ def require_permission(permission: Permission) -> Callable[[User], Awaitable[Use
     return _check_permission
 
 
+def require_any_permission(*permissions: Permission) -> Callable[[User], Awaitable[User]]:
+    async def _check_any(user: CurrentUserDep) -> User:
+        if not permissions_for(user.role) & set(permissions):
+            raise ForbiddenError
+        if user.must_change_password:
+            raise PasswordChangeRequiredError
+        return user
+
+    return _check_any
+
+
 DashboardViewerDep = Annotated[User, Depends(require_permission(Permission.DASHBOARD_VIEW))]
 MessagesManagerDep = Annotated[User, Depends(require_permission(Permission.MESSAGES_MANAGE))]
 CatalogManagerDep = Annotated[User, Depends(require_permission(Permission.CATALOG_MANAGE))]
@@ -86,6 +97,11 @@ BookingManagerDep = Annotated[User, Depends(require_permission(Permission.BOOKIN
 ComplaintManagerDep = Annotated[User, Depends(require_permission(Permission.COMPLAINTS_MANAGE))]
 FinanceManagerDep = Annotated[User, Depends(require_permission(Permission.FINANCE_MANAGE))]
 SettingsManagerDep = Annotated[User, Depends(require_permission(Permission.SETTINGS_MANAGE))]
+# Ratings matter both to complaint handling and to deciding whether a physio stays active.
+ReviewViewerDep = Annotated[
+    User,
+    Depends(require_any_permission(Permission.COMPLAINTS_MANAGE, Permission.PROVIDERS_VERIFY)),
+]
 
 
 def require_role(role: Role) -> Callable[[User], Awaitable[User]]:

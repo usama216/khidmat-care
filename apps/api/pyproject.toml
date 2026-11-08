@@ -51,6 +51,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "RUF001"] # RUF001 flags Urdu punctuation in test data.
 "migrations/versions/*" = ["E501"]
+# Reuses the order-journey fixture by importing it, which ruff reads as a redefinition.
+"tests/test_records.py" = ["F811"]
 
 [tool.mypy]
 python_version = "3.14"

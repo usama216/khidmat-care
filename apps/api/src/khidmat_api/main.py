@@ -28,6 +28,7 @@ from khidmat_api.modules.files.router import router as files_router
 from khidmat_api.modules.health.router import router as health_router
 from khidmat_api.modules.identity.router import router as auth_router
 from khidmat_api.modules.identity.staff_router import router as staff_admin_router
+from khidmat_api.modules.patients.admin_router import router as patients_admin_router
 from khidmat_api.modules.patients.router import router as patients_router
 from khidmat_api.modules.providers.router import admin_router as providers_admin_router
 from khidmat_api.modules.providers.router import public_router as physios_public_router
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api_v1.include_router(bookings_admin_router)
     api_v1.include_router(wallet_admin_router)
     api_v1.include_router(feedback_admin_router)
+    api_v1.include_router(patients_admin_router)
     app.include_router(api_v1)
 
     return app
