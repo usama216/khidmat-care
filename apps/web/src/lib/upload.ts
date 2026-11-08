@@ -35,7 +35,13 @@ export async function uploadFile(file: File, purpose: FilePurpose): Promise<stri
   } catch {
     throw new ApiError(0, "network_error", "The upload failed. Check your connection and try again.");
   }
-  if (!uploaded.ok) throw new ApiError(uploaded.status, "upload_failed", "The upload failed. Please try again.");
+  if (!uploaded.ok) {
+    // Storage explains a rejection in XML. Logged for support; it holds no secrets.
+    const body = await uploaded.text().catch(() => "");
+    const tag = (name: string) => body.match(new RegExp(`<${name}>([^<]*)</${name}>`))?.[1];
+    console.error("Storage rejected the upload:", uploaded.status, tag("Code"), tag("Message"));
+    throw new ApiError(uploaded.status, "upload_failed", "The upload failed. Please try again.");
+  }
 
   await apiPost(`/files/${ticket.file_id}/confirm`);
   return ticket.file_id;
