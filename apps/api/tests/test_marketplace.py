@@ -437,7 +437,7 @@ async def test_s3_upload_ticket_limits_size_and_type(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "host-secret")
     storage = S3Storage("khidmat-test-bucket", "ap-southeast-2", "OURKEY", "our-secret")
     ticket = storage.upload_ticket("provider_document/x.pdf", "application/pdf", 1000)
-    assert "khidmat-test-bucket" in ticket.url
+    assert ticket.url == "https://khidmat-test-bucket.s3.ap-southeast-2.amazonaws.com/"
     assert ticket.fields["key"] == "provider_document/x.pdf"
     assert ticket.fields["Content-Type"] == "application/pdf"
     link = storage.download_url("provider_document/x.pdf")

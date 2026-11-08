@@ -112,7 +112,14 @@ class S3Storage:
             region_name=region,
             aws_access_key_id=access_key_id,
             aws_secret_access_key=secret_access_key,
-            config=Config(signature_version="s3v4", retries={"max_attempts": 2}),
+            # Virtual addressing gives the regional host (bucket.s3.<region>.amazonaws.com). The
+            # global host redirects requests for new buckets outside us-east-1, which a browser
+            # upload can't follow.
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "virtual"},
+                retries={"max_attempts": 2},
+            ),
         )
 
     def upload_ticket(self, key: str, mime_type: str, max_bytes: int) -> UploadTicket:
