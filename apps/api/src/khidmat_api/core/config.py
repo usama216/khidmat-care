@@ -16,6 +16,7 @@ CommaSeparated = Annotated[list[str], NoDecode]
 
 _LOCAL_IP_HASH_SECRET = "local-development-only"  # noqa: S105
 _LOCAL_JWT_SECRET = "local-development-only-jwt-signing-secret"  # noqa: S105
+_LOCAL_ENCRYPTION_KEY = "local-development-only-encryption-key"
 _MIN_JWT_SECRET_LENGTH = 32
 
 
@@ -50,8 +51,19 @@ class Settings(BaseSettings):
 
     # Signs access tokens. Required when deployed.
     jwt_secret: SecretStr = SecretStr(_LOCAL_JWT_SECRET)
+    # Encrypts CNIC numbers. Required when deployed. Changing it makes stored values unreadable.
+    encryption_key: SecretStr = SecretStr(_LOCAL_ENCRYPTION_KEY)
     access_token_minutes: int = Field(default=15, ge=1, le=60)
     refresh_token_days: int = Field(default=14, ge=1, le=60)
+
+    # Uploads go to this S3 bucket when set, otherwise to a local folder in development.
+    s3_bucket: str | None = None
+    s3_region: str = "ap-southeast-2"
+    # Our own names, because serverless hosts reserve AWS_ACCESS_KEY_ID and set it to their own
+    # role. Passed to S3 explicitly so the host's credentials are never used by mistake.
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: SecretStr | None = None
+    local_upload_dir: str = ".uploads"
 
     @field_validator("cors_origins", "allowed_hosts", mode="before")
     @classmethod
@@ -79,6 +91,13 @@ class Settings(BaseSettings):
             secret = self.jwt_secret.get_secret_value()
             if secret == _LOCAL_JWT_SECRET or len(secret) < _MIN_JWT_SECRET_LENGTH:
                 raise ValueError("JWT_SECRET must be a long random value when deployed")
+            key = self.encryption_key.get_secret_value()
+            if key == _LOCAL_ENCRYPTION_KEY or len(key) < _MIN_JWT_SECRET_LENGTH:
+                raise ValueError("ENCRYPTION_KEY must be a long random value when deployed")
+            if self.s3_bucket and not (self.s3_access_key_id and self.s3_secret_access_key):
+                raise ValueError(
+                    "S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be set with S3_BUCKET"
+                )
         return self
 
     @property

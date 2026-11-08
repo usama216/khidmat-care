@@ -45,6 +45,10 @@ uv run pytest
 
 Tests use a real Postgres. They drop and recreate `khidmat_test` and `khidmat_test_migrations` on the local server. Set `TEST_DATABASE_URL` to use another server, and never point it at a database you care about.
 
+## File uploads
+
+Local development stores files in `apps/api/.uploads` (ignored by git). When `S3_BUCKET` is set, the same code uses S3 instead. The browser always POSTs to the URL the API gives it, so no frontend change is needed.
+
 ## Changing the database
 
 ```bash
@@ -68,6 +72,9 @@ Set the Vercel project's Root Directory to `apps/api`. `app.py` is the entrypoin
 | `CLIENT_IP_HEADER` | `x-forwarded-for` |
 | `IP_HASH_SECRET` | A long random value, see `.env.example` |
 | `JWT_SECRET` | A different long random value |
+| `ENCRYPTION_KEY` | Another long random value. Encrypts CNIC numbers, so never change it afterwards |
+| `S3_BUCKET`, `S3_REGION` | The private bucket for uploads. Without a bucket, deployed uploads are refused |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Keys of a user limited to that bucket. Not the `AWS_*` names, which Vercel reserves |
 
 Migrations don't run on Vercel. Run `uv run alembic upgrade head` from your machine with `DATABASE_URL` pointing at the production database.
 

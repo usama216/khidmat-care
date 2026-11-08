@@ -38,6 +38,7 @@ export type Dictionary = {
     subtitle: string;
     primary: string;
     secondary: string;
+    findPhysio: string;
     note: string;
     chips: string[];
     whatsappMessage: string;
@@ -136,6 +137,7 @@ export type Dictionary = {
     requirements: string[];
     note: string;
     cta: string;
+    ctaWhatsapp: string;
     message: string;
   };
   faq: { eyebrow: string; title: string; moreTitle: string; moreCta: string; items: { q: string; a: string }[] };

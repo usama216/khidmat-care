@@ -16,6 +16,14 @@ logger = structlog.get_logger("khidmat.request")
 REQUEST_ID_HEADER = "X-Request-ID"
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 
+_SIGNED_LINK_PREFIX = "/api/v1/files/local/"
+
+
+def _loggable_path(path: str) -> str:
+    """Signed links carry a token in the path, which must never reach the logs."""
+    return f"{_SIGNED_LINK_PREFIX}***" if path.startswith(_SIGNED_LINK_PREFIX) else path
+
+
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -80,7 +88,9 @@ class RequestContextMiddleware:
         try:
             await self.app(scope, receive, send_with_id)
         except Exception:
-            logger.exception("unhandled_exception", method=scope["method"], path=scope["path"])
+            logger.exception(
+                "unhandled_exception", method=scope["method"], path=_loggable_path(scope["path"])
+            )
             if response_started:
                 raise
             response = JSONResponse(
@@ -92,7 +102,7 @@ class RequestContextMiddleware:
             logger.info(
                 "request_completed",
                 method=scope["method"],
-                path=scope["path"],  # Path only: query strings can contain personal data.
+                path=_loggable_path(scope["path"]),  # Query strings can contain personal data.
                 status=status_code,
                 duration_ms=round((time.perf_counter() - started) * 1000, 1),
             )

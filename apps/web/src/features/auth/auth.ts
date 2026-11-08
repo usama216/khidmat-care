@@ -6,16 +6,38 @@ import { ApiError, apiGet, apiPost } from "@/lib/api";
 
 export type CurrentUser = {
   id: string;
+  phone: string;
   email: string | null;
   name: string | null;
-  role: "PATIENT" | "PROVIDER" | "ADMIN";
+  role: "PATIENT" | "PROVIDER" | "ADMIN" | "OPERATIONS" | "VERIFICATION" | "FINANCE" | "SUPPORT";
+  permissions: string[];
+  must_change_password: boolean;
 };
 
+export function isStaff(user: CurrentUser | null | undefined) {
+  return Boolean(user?.permissions.includes("dashboard.view"));
+}
+
 export const loginSchema = z.object({
-  email: z.email("Enter a valid email address."),
+  identifier: z.string().trim().min(3, "Enter your email or phone number."),
   password: z.string().min(1, "Enter your password."),
 });
 export type LoginValues = z.infer<typeof loginSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    current: z.string().min(1, "Enter your current password."),
+    next: z.string().min(8, "Use at least 8 characters.").max(128, "Use at most 128 characters."),
+    confirm: z.string(),
+  })
+  .refine((values) => values.next === values.confirm, {
+    path: ["confirm"],
+    message: "The passwords don't match.",
+  })
+  .refine((values) => values.next !== values.current, {
+    path: ["next"],
+    message: "Choose a different password from the current one.",
+  });
 
 const ME_KEY = ["auth", "me"] as const;
 
@@ -38,6 +60,17 @@ export function useLogin() {
   return useMutation<CurrentUser, ApiError, LoginValues>({
     mutationFn: (values) => apiPost<CurrentUser>("/auth/login", values),
     onSuccess: (user) => queryClient.setQueryData(ME_KEY, user),
+  });
+}
+
+export function useChangePassword() {
+  const queryClient = useQueryClient();
+  return useMutation<CurrentUser, ApiError, { current_password: string; new_password: string }>({
+    mutationFn: (values) => apiPost<CurrentUser>("/auth/change-password", values),
+    onSuccess: (user) => {
+      queryClient.setQueryData(ME_KEY, user);
+      void queryClient.invalidateQueries({ queryKey: ["admin"] });
+    },
   });
 }
 

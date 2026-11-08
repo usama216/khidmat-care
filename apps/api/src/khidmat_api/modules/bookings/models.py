@@ -47,6 +47,7 @@ class SessionStatus(StrEnum):
     ARRIVED = "ARRIVED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
+    NO_SHOW = "NO_SHOW"
 
 
 class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -72,7 +73,7 @@ class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     preferred_gender: Mapped[Gender | None] = mapped_column(enum_type(Gender, "preferred_gender"))
     status: Mapped[BookingStatus] = mapped_column(
-        enum_type(BookingStatus, "status"), default=BookingStatus.PENDING_ASSIGNMENT
+        enum_type(BookingStatus, "status"), default=BookingStatus.AWAITING_ACCEPTANCE
     )
 
     # Copied when booking, so later price or address edits don't rewrite history.
@@ -81,8 +82,8 @@ class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     commission_bps: Mapped[int]  # Basis points: 2000 = 20%.
     address_line: Mapped[str] = mapped_column(String(500))
     area_id: Mapped[UUID] = mapped_column(ForeignKey("areas.id"), index=True)
-    lat: Mapped[float]
-    lng: Mapped[float]
+    lat: Mapped[float | None]
+    lng: Mapped[float | None]
 
     preferred_start_at: Mapped[datetime]
     condition: Mapped[str] = mapped_column(Text)

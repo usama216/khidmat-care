@@ -1,8 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, Inbox, Package, Stethoscope, UsersRound, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  Inbox,
+  MessageSquareWarning,
+  Package,
+  Stethoscope,
+  UsersRound,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { Card, ErrorState, PageHeader, Skeleton } from "@/components/admin/ui";
+import { useCurrentUser } from "@/features/auth/auth";
 import { useOverview, type Overview } from "./api";
 
 type Tile = {
@@ -11,41 +22,71 @@ type Tile = {
   detail: (data: Overview) => string;
   icon: LucideIcon;
   href?: string;
+  permission?: string;
 };
 
 const TILES: Tile[] = [
+  {
+    label: "Physiotherapists to review",
+    value: (d) => d.providers_pending,
+    detail: (d) => `${d.providers_approved} approved`,
+    icon: Stethoscope,
+    href: "/admin/providers/",
+    permission: "providers.verify",
+  },
+  {
+    label: "Orders needing a physio",
+    value: (d) => d.bookings_awaiting_assignment,
+    detail: (d) => `${d.bookings_awaiting_acceptance} waiting for a reply, ${d.bookings_active} active`,
+    icon: CalendarCheck,
+    href: "/admin/bookings/",
+    permission: "bookings.manage",
+  },
+  {
+    label: "Top-ups to check",
+    value: (d) => d.pending_topups,
+    detail: () => "Payments from physiotherapists",
+    icon: Wallet,
+    href: "/admin/balances/",
+    permission: "finance.manage",
+  },
+  {
+    label: "Open complaints",
+    value: (d) => d.open_complaints,
+    detail: () => "Reported by patients",
+    icon: MessageSquareWarning,
+    href: "/admin/complaints/",
+    permission: "complaints.manage",
+  },
   {
     label: "New messages",
     value: (d) => d.new_messages,
     detail: (d) => `${d.messages_last_7_days} in the last 7 days`,
     icon: Inbox,
     href: "/admin/messages/",
+    permission: "messages.manage",
   },
-  {
-    label: "Physiotherapists awaiting approval",
-    value: (d) => d.providers_pending,
-    detail: (d) => `${d.providers_approved} approved`,
-    icon: Stethoscope,
-  },
-  {
-    label: "Bookings to assign",
-    value: (d) => d.bookings_awaiting_assignment,
-    detail: (d) => `${d.bookings_active} active`,
-    icon: CalendarCheck,
-  },
-  { label: "Patients", value: (d) => d.patients, detail: () => "Registered patients", icon: UsersRound },
+  { label: "Patients", value: (d) => d.patients, detail: () => "People booked for", icon: UsersRound },
   {
     label: "Active services",
     value: (d) => d.active_services,
     detail: (d) => `${d.active_packages} priced packages`,
     icon: Package,
     href: "/admin/catalog/",
+    permission: "catalog.manage",
   },
 ];
 
 export function OverviewPage() {
   const overview = useOverview();
-  const noPrices = overview.data && overview.data.active_packages === 0;
+  const me = useCurrentUser();
+  const permissions = me.data?.permissions ?? [];
+  const canManageCatalog = permissions.includes("catalog.manage");
+  const noPrices = canManageCatalog && overview.data && overview.data.active_packages === 0;
+  // Staff see every count, but only get links to pages their role can open.
+  const tiles = TILES.map((tile) =>
+    tile.permission && !permissions.includes(tile.permission) ? { ...tile, href: undefined } : tile,
+  );
 
   return (
     <>
@@ -70,7 +111,7 @@ export function OverviewPage() {
         </Card>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {TILES.map((tile) => (
+          {tiles.map((tile) => (
             <StatTile key={tile.label} tile={tile} data={overview.data} />
           ))}
         </div>

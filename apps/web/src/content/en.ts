@@ -33,6 +33,7 @@ export const en: Dictionary = {
       "A verified physiotherapist comes to your home after surgery, a stroke or an injury, and for elderly care. You get a fixed price, the option of a female physio, and progress your family can follow.",
     primary: "Book on WhatsApp",
     secondary: "See how it works",
+    findPhysio: "Find a physiotherapist",
     note: "No app needed. Just send us a message.",
     chips: [
       "Physios verified in person",
@@ -243,7 +244,8 @@ export const en: Dictionary = {
       "Home-visit experience is a plus",
     ],
     note: "We check every document in person before you get your first patient.",
-    cta: "Apply on WhatsApp",
+    cta: "Apply now",
+    ctaWhatsapp: "Ask on WhatsApp",
     message:
       "Assalam o Alaikum, I'm a physiotherapist in Lahore and I'd like to join Khidmat Care.\n\nName:\nQualification:\nYears of experience:\nAreas I can cover:\nGender:",
   },

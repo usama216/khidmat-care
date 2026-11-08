@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from khidmat_api.core.config import Environment
 from khidmat_api.core.errors import ConflictError
+from khidmat_api.core.middleware import _loggable_path
 from khidmat_api.main import create_app
 from tests.conftest import ALLOWED_ORIGIN, build_settings
 
@@ -116,7 +117,13 @@ def test_docs_are_disabled_in_production(database_url: str) -> None:
         environment=Environment.PRODUCTION,
         ip_hash_secret="test-secret",
         jwt_secret="x" * 48,
+        encryption_key="k" * 48,
     )
     app = create_app(settings)
     assert app.docs_url is None
     assert app.openapi_url is None
+
+
+def test_signed_link_tokens_are_masked_in_logs() -> None:
+    assert _loggable_path("/api/v1/files/local/secret-token") == "/api/v1/files/local/***"
+    assert _loggable_path("/api/v1/bookings") == "/api/v1/bookings"

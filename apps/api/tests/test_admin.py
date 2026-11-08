@@ -169,13 +169,28 @@ async def test_invalid_packages_are_rejected(
     assert response.status_code == 422
 
 
-async def test_commission_is_validated_and_saved(admin_client: AsyncClient) -> None:
-    assert (await admin_client.get(f"{BASE}/catalog/commission")).json() == {"commission_bps": None}
-    bad = await admin_client.put(f"{BASE}/catalog/commission", json={"commission_bps": 10001})
-    assert bad.status_code == 422
+async def test_settings_are_validated_and_saved(admin_client: AsyncClient) -> None:
+    defaults = (await admin_client.get(f"{BASE}/settings")).json()
+    assert defaults["commission_bps"] is None
+    assert defaults["minimum_balance_pkr"] == 700
 
-    await admin_client.put(f"{BASE}/catalog/commission", json={"commission_bps": 2000})
-    assert (await admin_client.get(f"{BASE}/catalog/commission")).json() == {"commission_bps": 2000}
+    for bad in ({"commission_bps": 10001}, {"minimum_balance_pkr": -1}):
+        assert (await admin_client.patch(f"{BASE}/settings", json=bad)).status_code == 422
+
+    await admin_client.patch(
+        f"{BASE}/settings",
+        json={
+            "commission_bps": 2000,
+            "minimum_balance_pkr": 900,
+            "topup_instructions": "JazzCash 0300",
+        },
+    )
+    saved = (await admin_client.get(f"{BASE}/settings")).json()
+    assert saved == {
+        "commission_bps": 2000,
+        "minimum_balance_pkr": 900,
+        "topup_instructions": "JazzCash 0300",
+    }
 
 
 async def test_overview_counts_real_data(admin_client: AsyncClient, session: AsyncSession) -> None:

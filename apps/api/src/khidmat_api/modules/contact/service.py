@@ -1,7 +1,5 @@
 """Business rules for contact messages."""
 
-import hashlib
-import hmac
 from datetime import UTC, datetime, timedelta
 
 import structlog
@@ -10,16 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.config import Settings
 from khidmat_api.core.errors import RateLimitedError
+from khidmat_api.core.requests import hash_ip
 from khidmat_api.modules.contact.models import ContactMessage, ContactMessageStatus
 from khidmat_api.modules.contact.schemas import ContactMessageCreate
 
 logger = structlog.get_logger("khidmat.contact")
 
 _RATE_LIMIT_WINDOW = timedelta(hours=1)
-
-
-def hash_ip(ip_address: str, secret: str) -> str:
-    return hmac.new(secret.encode(), ip_address.encode(), hashlib.sha256).hexdigest()
 
 
 async def submit_contact_message(
@@ -31,7 +26,7 @@ async def submit_contact_message(
         return
 
     # Counted in the database because serverless instances don't share memory.
-    ip_hash = hash_ip(client_ip, settings.ip_hash_secret.get_secret_value())
+    ip_hash = hash_ip(client_ip, settings)
     recent = await session.scalar(
         select(func.count())
         .select_from(ContactMessage)

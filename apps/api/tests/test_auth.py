@@ -1,5 +1,6 @@
 """Login, sessions, roles and CSRF protection."""
 
+import re
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
@@ -27,7 +28,7 @@ LOGIN = "/api/v1/auth/login"
 REFRESH = "/api/v1/auth/refresh"
 ME = "/api/v1/auth/me"
 LOGOUT = "/api/v1/auth/logout"
-CREDENTIALS = {"email": EMAIL, "password": PASSWORD}
+CREDENTIALS = {"identifier": EMAIL, "password": PASSWORD}
 
 
 async def make_user(
@@ -74,6 +75,7 @@ def test_cookies_are_secure_when_deployed(database_url: str) -> None:
         environment=Environment.PRODUCTION,
         ip_hash_secret="test-secret",
         jwt_secret="x" * 48,
+        encryption_key="k" * 48,
     )
     assert settings.secure_cookies is True
 
@@ -82,15 +84,15 @@ async def test_login_is_case_insensitive_for_email(
     client: AsyncClient, session: AsyncSession
 ) -> None:
     await make_user(session)
-    response = await client.post(LOGIN, json={"email": EMAIL.upper(), "password": PASSWORD})
+    response = await client.post(LOGIN, json={"identifier": EMAIL.upper(), "password": PASSWORD})
     assert response.status_code == 200
 
 
 @pytest.mark.parametrize(
     "credentials",
     [
-        {"email": EMAIL, "password": "wrong password"},
-        {"email": "nobody@khidmat.example", "password": PASSWORD},
+        {"identifier": EMAIL, "password": "wrong password"},
+        {"identifier": "nobody@khidmat.example", "password": PASSWORD},
     ],
 )
 async def test_wrong_credentials_get_the_same_error(
@@ -99,7 +101,7 @@ async def test_wrong_credentials_get_the_same_error(
     await make_user(session)
     response = await client.post(LOGIN, json=credentials)
     assert response.status_code == 401
-    assert response.json()["error"]["message"] == "The email or password is incorrect."
+    assert response.json()["error"]["message"] == "The login details are incorrect."
 
 
 async def test_inactive_user_cannot_log_in(client: AsyncClient, session: AsyncSession) -> None:
@@ -120,7 +122,7 @@ async def test_account_locks_after_repeated_failures(
     client: AsyncClient, session: AsyncSession
 ) -> None:
     await make_user(session)
-    wrong = {"email": EMAIL, "password": "wrong password"}
+    wrong = {"identifier": EMAIL, "password": "wrong password"}
     for _ in range(MAX_FAILED_LOGINS):
         assert (await client.post(LOGIN, json=wrong)).status_code == 401
 
@@ -142,7 +144,7 @@ async def test_me_requires_a_session(client: AsyncClient, session: AsyncSession)
     await client.post(LOGIN, json=CREDENTIALS)
     response = await client.get(ME)
     assert response.status_code == 200
-    assert "password" not in response.text
+    assert "password_hash" not in response.text
 
 
 async def test_suspending_an_account_ends_access_immediately(
@@ -165,7 +167,12 @@ async def test_bad_access_tokens_are_rejected(
     user = await make_user(session)
     now = datetime.now(UTC)
     secret = settings.jwt_secret.get_secret_value()
-    claims = {"sub": str(user.id), "type": "access", "exp": now + timedelta(minutes=5)}
+    claims = {
+        "sub": str(user.id),
+        "type": "access",
+        "iat": now,
+        "exp": now + timedelta(minutes=5),
+    }
     if token_factory == "expired":
         token = jwt.encode(claims | {"exp": now - timedelta(minutes=1)}, secret, algorithm="HS256")
     elif token_factory == "wrong_secret":
@@ -262,7 +269,7 @@ async def test_login_and_failures_are_audited_without_the_password(
     client: AsyncClient, session: AsyncSession
 ) -> None:
     await make_user(session)
-    await client.post(LOGIN, json={"email": EMAIL, "password": "wrong password"})
+    await client.post(LOGIN, json={"identifier": EMAIL, "password": "wrong password"})
     await client.post(LOGIN, json=CREDENTIALS)
     rows = list(await session.scalars(select(AuditLog).order_by(AuditLog.id)))
     assert [row.action for row in rows] == ["auth.login_failed", "auth.login"]
@@ -286,19 +293,17 @@ async def test_every_admin_route_is_protected(
 
     uuid = "00000000-0000-0000-0000-000000000000"
     for method, path in routes:
-        url = path.replace("{message_id}", uuid).replace("{service_id}", uuid)
-        url = url.replace("{package_id}", uuid)
+        url = re.sub(r"\{[a-z_]+\}", uuid, path)
         response = await client.request(method, url, json={})
         assert response.status_code == 401, f"{method} {path} allowed anonymous access"
 
     await make_user(session, email="patient@khidmat.example", role=Role.PATIENT)
     login = await client.post(
-        LOGIN, json={"email": "patient@khidmat.example", "password": PASSWORD}
+        LOGIN, json={"identifier": "patient@khidmat.example", "password": PASSWORD}
     )
     assert login.status_code == 200
     for method, path in routes:
-        url = path.replace("{message_id}", uuid).replace("{service_id}", uuid)
-        url = url.replace("{package_id}", uuid)
+        url = re.sub(r"\{[a-z_]+\}", uuid, path)
         response = await client.request(method, url, json={})
         assert response.status_code == 403, f"{method} {path} allowed a patient"
 
@@ -315,7 +320,9 @@ async def test_create_admin_creates_a_usable_account(
     await upsert_admin(
         session, email="New@Khidmat.example", phone="+923009998888", name="Usama", password=PASSWORD
     )
-    response = await client.post(LOGIN, json={"email": "new@khidmat.example", "password": PASSWORD})
+    response = await client.post(
+        LOGIN, json={"identifier": "new@khidmat.example", "password": PASSWORD}
+    )
     assert response.status_code == 200
     assert response.json()["role"] == "ADMIN"
     count = await session.scalar(select(func.count()).select_from(User))

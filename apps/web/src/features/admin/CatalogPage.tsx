@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { Check, CircleOff, Percent, Plus } from "lucide-react";
+import { Check, CircleOff, Plus } from "lucide-react";
 import {
   adminButton,
   adminInput,
@@ -18,15 +18,12 @@ import {
 } from "@/components/admin/ui";
 import { formatPkr } from "@/lib/format";
 import {
-  commissionSchema,
   packageSchema,
   priceSchema,
   serviceSchema,
-  useCommission,
   useCreatePackage,
   useCreateService,
   useServices,
-  useSetCommission,
   useUpdatePackage,
   useUpdateService,
   type Package,
@@ -58,8 +55,6 @@ export function CatalogPage() {
           </button>
         }
       />
-
-      <CommissionCard />
 
       {services.isPending ? (
         <Card className="mt-6">
@@ -171,61 +166,6 @@ function ServiceCard({
         </ul>
       )}
       {retired > 0 ? <p className="px-4 pb-4 text-xs text-stone-500">{retired} retired package(s) hidden.</p> : null}
-    </Card>
-  );
-}
-
-function CommissionCard() {
-  const id = useId();
-  const commission = useCommission();
-  const save = useSetCommission();
-  const [value, setValue] = useState<string | null>(null);
-  const [error, setError] = useState<string>();
-  const current = commission.data?.commission_bps;
-  const shown = value ?? (current == null ? "" : String(current / 100));
-
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    const parsed = commissionSchema.safeParse(shown);
-    if (!parsed.success || shown.trim() === "") {
-      setError(parsed.success ? "Enter a percentage." : parsed.error.issues[0]?.message);
-      return;
-    }
-    setError(undefined);
-    save.mutate(Math.round(parsed.data * 100), { onSuccess: () => setValue(null) });
-  };
-
-  return (
-    <Card className="mt-6 p-4">
-      <form onSubmit={onSubmit} noValidate className="flex flex-wrap items-start gap-3">
-        <div className="w-44">
-          <FormField id={id} label="Default commission" error={error}>
-            <div className="relative">
-              <input
-                id={id}
-                inputMode="decimal"
-                disabled={commission.isPending}
-                value={shown}
-                onChange={(event) => setValue(event.target.value)}
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? `${id}-error` : undefined}
-                placeholder="Not set"
-                className={`${adminInput} pe-8`}
-              />
-              <Percent className="absolute end-2.5 top-1/2 size-3.5 -translate-y-1/2 text-stone-400" aria-hidden="true" />
-            </div>
-          </FormField>
-        </div>
-        <button type="submit" disabled={save.isPending || value === null} className={adminButton("secondary", "mt-[1.625rem]")}>
-          {save.isPending ? "Saving..." : "Save"}
-        </button>
-        <p className="mt-7 max-w-md text-xs text-stone-500">
-          Copied onto each booking when it&apos;s made, so changing it doesn&apos;t affect past bookings.
-        </p>
-      </form>
-      <div className="mt-3 empty:hidden">
-        {save.isError ? <FormError message={errorMessage(save.error)} /> : null}
-      </div>
     </Card>
   );
 }

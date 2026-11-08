@@ -1,4 +1,5 @@
 .venv
+.uploads
 .env
 .env.*
 !.env.example

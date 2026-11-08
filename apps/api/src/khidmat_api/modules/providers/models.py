@@ -5,6 +5,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from khidmat_api.core.enums import Gender
@@ -18,6 +19,7 @@ from khidmat_api.core.models import (
 
 
 class ProviderStatus(StrEnum):
+    DRAFT = "DRAFT"
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
@@ -52,9 +54,18 @@ class Provider(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     bio: Mapped[str | None] = mapped_column(Text)
     photo_file_id: Mapped[UUID | None] = mapped_column(ForeignKey("file_assets.id"), unique=True)
     status: Mapped[ProviderStatus] = mapped_column(
-        enum_type(ProviderStatus, "status"), default=ProviderStatus.PENDING
+        enum_type(ProviderStatus, "status"), default=ProviderStatus.DRAFT
     )
     status_reason: Mapped[str | None] = mapped_column(Text)
+    submitted_at: Mapped[datetime | None]
+    agreement_accepted_at: Mapped[datetime | None]
+    # Each completed check with its time, e.g. {"cnic": "2026-11-06T10:00:00+00:00"}.
+    # Who did it is in the audit log.
+    verification_checks: Mapped[dict[str, str]] = mapped_column(
+        JSONB, default=dict, server_default="{}"
+    )
+    # Prepaid balance. Kept here for quick checks; wallet_transactions is the full history.
+    balance_pkr: Mapped[int] = mapped_column(default=0, server_default="0")
     approved_at: Mapped[datetime | None]
     # Denormalised from reviews so listing and filtering providers doesn't aggregate each time.
     rating_avg: Mapped[float] = mapped_column(default=0)

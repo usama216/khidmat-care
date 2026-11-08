@@ -6,15 +6,20 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid7
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.config import Settings
-from khidmat_api.core.errors import RateLimitedError, UnauthorizedError
+from khidmat_api.core.errors import ConflictError, RateLimitedError, UnauthorizedError
+from khidmat_api.core.phone import normalize_phone
+from khidmat_api.core.requests import hash_ip
 from khidmat_api.modules.audit.service import record_audit
-from khidmat_api.modules.identity.models import RefreshToken, User
+from khidmat_api.modules.identity.models import RefreshToken, Role, User
+from khidmat_api.modules.identity.schemas import RegisterRequest
 from khidmat_api.modules.identity.security import (
     create_access_token,
+    hash_password,
     hash_refresh_token,
     new_refresh_token,
     verify_password,
@@ -27,7 +32,10 @@ LOCK_DURATION = timedelta(minutes=15)
 # Two browser tabs can refresh at the same moment. That isn't token theft.
 REFRESH_REUSE_GRACE = timedelta(seconds=10)
 
-_INVALID_CREDENTIALS = "The email or password is incorrect."
+MAX_SIGNUPS_PER_HOUR = 5
+_SIGNUP_WINDOW = timedelta(hours=1)
+
+_INVALID_CREDENTIALS = "The login details are incorrect."
 
 
 @dataclass(frozen=True)
@@ -68,10 +76,20 @@ async def _issue_tokens(
     return SessionTokens(user, create_access_token(user.id, settings), refresh_token)
 
 
+async def _find_login_user(session: AsyncSession, identifier: str) -> User | None:
+    if "@" in identifier:
+        return await session.scalar(select(User).where(User.email == normalize_email(identifier)))
+    try:
+        phone = normalize_phone(identifier)
+    except ValueError:
+        return None
+    return await session.scalar(select(User).where(User.phone == phone))
+
+
 async def login(
-    session: AsyncSession, email: str, password: str, settings: Settings, client: ClientInfo
+    session: AsyncSession, identifier: str, password: str, settings: Settings, client: ClientInfo
 ) -> SessionTokens:
-    user = await session.scalar(select(User).where(User.email == normalize_email(email)))
+    user = await _find_login_user(session, identifier)
     now = datetime.now(UTC)
 
     if user is not None and user.locked_until is not None and user.locked_until > now:
@@ -164,3 +182,86 @@ async def logout(session: AsyncSession, refresh_token: str | None) -> None:
     if stored is not None:
         await _revoke_family(session, stored.family_id)
         await session.commit()
+
+
+async def revoke_all_sessions(session: AsyncSession, user_id: UUID) -> None:
+    await session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=datetime.now(UTC))
+    )
+
+
+async def register(
+    session: AsyncSession, payload: RegisterRequest, settings: Settings, client: ClientInfo
+) -> SessionTokens:
+    ip_hash = hash_ip(client.ip_address, settings)
+    recent = await session.scalar(
+        select(func.count())
+        .select_from(User)
+        .where(
+            User.signup_ip_hash == ip_hash,
+            User.created_at > datetime.now(UTC) - _SIGNUP_WINDOW,
+        )
+    )
+    if recent is not None and recent >= MAX_SIGNUPS_PER_HOUR:
+        raise RateLimitedError
+
+    user = User(
+        name=payload.name,
+        phone=payload.phone,
+        role=Role(payload.role),
+        password_hash=await asyncio.to_thread(hash_password, payload.password),
+        signup_ip_hash=ip_hash,
+    )
+    session.add(user)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ConflictError("An account with this phone number already exists.") from exc
+
+    tokens = await _issue_tokens(session, user, settings, client, family_id=uuid7())
+    record_audit(
+        session,
+        actor_id=user.id,
+        action="auth.registered",
+        entity_type="user",
+        entity_id=str(user.id),
+        metadata={"role": user.role.value},
+        ip_address=client.ip_address,
+    )
+    await session.commit()
+    await session.refresh(user)
+    return tokens
+
+
+async def change_password(
+    session: AsyncSession,
+    user: User,
+    current_password: str,
+    new_password: str,
+    settings: Settings,
+    client: ClientInfo,
+) -> SessionTokens:
+    if not await asyncio.to_thread(verify_password, current_password, user.password_hash):
+        raise UnauthorizedError("The current password is incorrect.")
+    if current_password == new_password:
+        raise ConflictError("Choose a password different from the current one.")
+
+    user.password_hash = await asyncio.to_thread(hash_password, new_password)
+    user.must_change_password = False
+    user.password_changed_at = datetime.now(UTC)
+    await revoke_all_sessions(session, user.id)
+    tokens = await _issue_tokens(session, user, settings, client, family_id=uuid7())
+    record_audit(
+        session,
+        actor_id=user.id,
+        action="auth.password_changed",
+        entity_type="user",
+        entity_id=str(user.id),
+        ip_address=client.ip_address,
+    )
+    await session.commit()
+    await session.refresh(user)
+    return tokens

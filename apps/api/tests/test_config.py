@@ -32,6 +32,7 @@ def test_rejects_wildcards_when_deployed(environment: Environment, field: str) -
             environment=environment,
             ip_hash_secret="test-secret",
             jwt_secret="x" * 48,
+            encryption_key="k" * 48,
             **{field: ["*"]},
         )
 
@@ -40,7 +41,10 @@ def test_only_deployed_environments_use_json_logs() -> None:
     assert _settings(environment=Environment.LOCAL).json_logs is False
     assert (
         _settings(
-            environment=Environment.PRODUCTION, ip_hash_secret="test-secret", jwt_secret="x" * 48
+            environment=Environment.PRODUCTION,
+            ip_hash_secret="test-secret",
+            jwt_secret="x" * 48,
+            encryption_key="k" * 48,
         ).json_logs
         is True
     )

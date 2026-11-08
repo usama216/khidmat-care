@@ -12,6 +12,7 @@ from khidmat_api.modules.notifications import models as notifications
 from khidmat_api.modules.patients import models as patients
 from khidmat_api.modules.payments import models as payments
 from khidmat_api.modules.providers import models as providers
+from khidmat_api.modules.wallet import models as wallet
 
 __all__ = [
     "Base",
@@ -26,4 +27,5 @@ __all__ = [
     "patients",
     "payments",
     "providers",
+    "wallet",
 ]

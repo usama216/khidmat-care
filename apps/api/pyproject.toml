@@ -7,13 +7,17 @@ dependencies = [
     "alembic>=1.20,<2",
     "argon2-cffi>=25.1",
     "asyncpg>=0.31,<1",
+    "boto3>=1.40",
+    "cryptography>=46",
     "email-validator>=2.2",
     "fastapi>=0.162,<1",
     "pydantic>=2.14,<3",
     "pydantic-settings>=2.16,<3",
     "pyjwt>=2.10",
+    "python-multipart>=0.0.20",
     "sqlalchemy[asyncio]>=2.1,<2.2",
     "structlog>=26.1",
+    "tzdata>=2025.2",
     "uvicorn[standard]>=0.54,<1",
 ]
 
@@ -55,7 +59,7 @@ files = ["src", "tests", "migrations"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["asyncpg.*"]
+module = ["asyncpg.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

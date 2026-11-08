@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { type ApiError, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api";
+import { type ApiError, apiGet, apiPatch, apiPost } from "@/lib/api";
 
 export type Page<T> = { items: T[]; total: number; page: number; page_size: number };
 
@@ -13,6 +13,9 @@ export type Overview = {
   providers_approved: number;
   patients: number;
   bookings_awaiting_assignment: number;
+  bookings_awaiting_acceptance: number;
+  pending_topups: number;
+  open_complaints: number;
   bookings_active: number;
   active_services: number;
   active_packages: number;
@@ -56,7 +59,36 @@ export type AuditEntry = {
   created_at: string;
 };
 
+export const STAFF_ROLES = ["ADMIN", "OPERATIONS", "VERIFICATION", "FINANCE", "SUPPORT"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export type StaffMember = {
+  id: string;
+  name: string | null;
+  phone: string;
+  email: string | null;
+  role: StaffRole;
+  is_active: boolean;
+  must_change_password: boolean;
+  created_at: string;
+};
+
+export type TemporaryPassword = { staff: StaffMember; temporary_password: string };
+
 // These mirror the API's limits. The server still validates everything itself.
+export const staffSchema = z.object({
+  name: z.string().trim().min(2, "Enter at least 2 characters.").max(120),
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (value) => /^(03\d{9}|(\+|00)[1-9]\d{7,14})$/.test(value.replace(/[\s()-]/g, "")),
+      "Enter a valid phone number, e.g. 0300 1234567.",
+    ),
+  email: z.email("Enter a valid email address."),
+  role: z.enum(STAFF_ROLES),
+});
+
 export const serviceSchema = z.object({
   name: z.string().trim().min(2, "Enter at least 2 characters.").max(120),
   name_urdu: z.string().trim().min(2, "Enter at least 2 characters.").max(120),
@@ -82,24 +114,19 @@ export const packageSchema = z.object({
 
 export const priceSchema = packageSchema.shape.price_pkr;
 
-export const commissionSchema = z.coerce
-  .number<string>("Enter a number.")
-  .min(0, "Must be 0% or more.")
-  .max(100, "Must be 100% or less.")
-  .refine((value) => Number.isInteger(value * 100), "Use at most 2 decimal places.");
-
 const KEYS = {
   overview: ["admin", "overview"] as const,
   messages: ["admin", "messages"] as const,
   services: ["admin", "services"] as const,
-  commission: ["admin", "commission"] as const,
   audit: ["admin", "audit"] as const,
+  staff: ["admin", "staff"] as const,
 };
 
-export function useOverview() {
+export function useOverview(enabled = true) {
   return useQuery<Overview, ApiError>({
     queryKey: KEYS.overview,
     queryFn: () => apiGet<Overview>("/admin/overview"),
+    enabled,
   });
 }
 
@@ -168,28 +195,45 @@ export function useUpdatePackage() {
   );
 }
 
-export function useCommission() {
-  return useQuery<{ commission_bps: number | null }, ApiError>({
-    queryKey: KEYS.commission,
-    queryFn: () => apiGet<{ commission_bps: number | null }>("/admin/catalog/commission"),
-  });
-}
-
-export function useSetCommission() {
-  const queryClient = useQueryClient();
-  return useMutation<unknown, ApiError, number>({
-    mutationFn: (bps) => apiPut("/admin/catalog/commission", { commission_bps: bps }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: KEYS.commission });
-      void queryClient.invalidateQueries({ queryKey: KEYS.audit });
-    },
-  });
-}
-
 export function useAuditLogs(page: number) {
   return useQuery<Page<AuditEntry>, ApiError>({
     queryKey: [...KEYS.audit, page],
     queryFn: () => apiGet<Page<AuditEntry>>("/admin/audit-logs", { page, page_size: 25 }),
     placeholderData: keepPreviousData,
   });
+}
+
+export function useStaff(page: number) {
+  return useQuery<Page<StaffMember>, ApiError>({
+    queryKey: [...KEYS.staff, page],
+    queryFn: () => apiGet<Page<StaffMember>>("/admin/staff", { page, page_size: 25 }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+function useStaffMutation<TResult, TVariables>(mutationFn: (variables: TVariables) => Promise<TResult>) {
+  const queryClient = useQueryClient();
+  return useMutation<TResult, ApiError, TVariables>({
+    mutationFn,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: KEYS.staff });
+      void queryClient.invalidateQueries({ queryKey: KEYS.audit });
+    },
+  });
+}
+
+export function useCreateStaff() {
+  return useStaffMutation((values: z.infer<typeof staffSchema>) =>
+    apiPost<TemporaryPassword>("/admin/staff", values),
+  );
+}
+
+export function useUpdateStaff() {
+  return useStaffMutation(({ id, ...changes }: { id: string; role?: StaffRole; is_active?: boolean }) =>
+    apiPatch<StaffMember>(`/admin/staff/${id}`, changes),
+  );
+}
+
+export function useResetStaffPassword() {
+  return useStaffMutation((id: string) => apiPost<TemporaryPassword>(`/admin/staff/${id}/reset-password`));
 }

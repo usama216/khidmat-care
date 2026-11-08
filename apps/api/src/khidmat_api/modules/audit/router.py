@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from khidmat_api.core.database import SessionDep
 from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.modules.audit.service import list_audit_logs
-from khidmat_api.modules.identity.dependencies import AdminUserDep
+from khidmat_api.modules.identity.dependencies import AuditViewerDep
 
 router = APIRouter(prefix="/admin/audit-logs", tags=["admin"])
 
@@ -30,7 +30,7 @@ class AuditLogResponse(BaseModel):
 
 @router.get("", summary="List audit log entries, newest first")
 async def list_entries(
-    _: AdminUserDep, session: SessionDep, params: PageParamsDep
+    _: AuditViewerDep, session: SessionDep, params: PageParamsDep
 ) -> Page[AuditLogResponse]:
     rows, total = await list_audit_logs(session, offset=params.offset, limit=params.page_size)
     return Page(

@@ -8,10 +8,12 @@ from khidmat_api.modules.bookings.models import BookingStatus
 from khidmat_api.modules.bookings.service import count_bookings
 from khidmat_api.modules.catalog.service import count_active_packages, count_active_services
 from khidmat_api.modules.contact.service import count_new_messages, count_recent_messages
-from khidmat_api.modules.identity.dependencies import AdminUserDep
+from khidmat_api.modules.feedback.service import count_open_complaints
+from khidmat_api.modules.identity.dependencies import DashboardViewerDep
 from khidmat_api.modules.patients.service import count_patients
 from khidmat_api.modules.providers.models import ProviderStatus
 from khidmat_api.modules.providers.service import count_providers
+from khidmat_api.modules.wallet.service import count_pending_topups
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -23,13 +25,16 @@ class OverviewResponse(BaseModel):
     providers_approved: int
     patients: int
     bookings_awaiting_assignment: int
+    bookings_awaiting_acceptance: int
     bookings_active: int
     active_services: int
     active_packages: int
+    pending_topups: int
+    open_complaints: int
 
 
 @router.get("/overview", summary="Counts shown on the dashboard")
-async def overview(_: AdminUserDep, session: SessionDep) -> OverviewResponse:
+async def overview(_: DashboardViewerDep, session: SessionDep) -> OverviewResponse:
     return OverviewResponse(
         new_messages=await count_new_messages(session),
         messages_last_7_days=await count_recent_messages(session, days=7),
@@ -39,7 +44,12 @@ async def overview(_: AdminUserDep, session: SessionDep) -> OverviewResponse:
         bookings_awaiting_assignment=await count_bookings(
             session, BookingStatus.PENDING_ASSIGNMENT
         ),
+        bookings_awaiting_acceptance=await count_bookings(
+            session, BookingStatus.AWAITING_ACCEPTANCE
+        ),
         bookings_active=await count_bookings(session, BookingStatus.ACTIVE),
         active_services=await count_active_services(session),
         active_packages=await count_active_packages(session),
+        pending_topups=await count_pending_topups(session),
+        open_complaints=await count_open_complaints(session),
     )

@@ -20,6 +20,10 @@ class Role(StrEnum):
     PATIENT = "PATIENT"
     PROVIDER = "PROVIDER"
     ADMIN = "ADMIN"
+    OPERATIONS = "OPERATIONS"
+    VERIFICATION = "VERIFICATION"
+    FINANCE = "FINANCE"
+    SUPPORT = "SUPPORT"
 
 
 class Locale(StrEnum):
@@ -29,6 +33,7 @@ class Locale(StrEnum):
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "users"
+    __table_args__ = (Index("ix_users_signup_ip_hash_created_at", "signup_ip_hash", "created_at"),)
 
     phone: Mapped[str] = mapped_column(String(16), unique=True)  # E.164: +923001234567
     email: Mapped[str | None] = mapped_column(String(254), unique=True)
@@ -36,8 +41,12 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     role: Mapped[Role] = mapped_column(enum_type(Role, "role"), default=Role.PATIENT)
     locale: Mapped[Locale] = mapped_column(enum_type(Locale, "locale"), default=Locale.EN)
     is_active: Mapped[bool] = mapped_column(default=True)
-    # Staff sign in with email and password. Patients and providers will use phone OTP.
     password_hash: Mapped[str | None] = mapped_column(String(255))
+    # Set for admin-issued temporary passwords. Blocks the dashboard until changed.
+    must_change_password: Mapped[bool] = mapped_column(default=False, server_default="false")
+    password_changed_at: Mapped[datetime | None]
+    # Limits sign-ups from one address. A keyed hash, so the raw IP is never stored.
+    signup_ip_hash: Mapped[str | None] = mapped_column(String(64))
     failed_login_count: Mapped[int] = mapped_column(default=0, server_default="0")
     locked_until: Mapped[datetime | None]
 

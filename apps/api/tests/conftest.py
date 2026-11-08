@@ -6,6 +6,7 @@ database is dropped and recreated on every run, so never point it at a database 
 
 import asyncio
 import os
+import tempfile
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
@@ -94,6 +95,7 @@ def build_settings(database_url: str, **overrides: object) -> Settings:
         "cors_origins": [ALLOWED_ORIGIN],
         "allowed_hosts": ["localhost"],
         "log_level": "CRITICAL",
+        "local_upload_dir": str(Path(tempfile.gettempdir()) / "khidmat-test-uploads"),
     }
     return Settings(_env_file=None, **(values | overrides))  # type: ignore[arg-type]
 

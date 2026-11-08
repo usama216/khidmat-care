@@ -2,6 +2,7 @@
 
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -47,18 +48,24 @@ def create_access_token(user_id: UUID, settings: Settings) -> str:
     )
 
 
-def read_access_token(token: str, settings: Settings) -> UUID | None:
-    """Return the user id from a valid access token, or None."""
+@dataclass(frozen=True)
+class AccessClaims:
+    user_id: UUID
+    issued_at: int
+
+
+def read_access_token(token: str, settings: Settings) -> AccessClaims | None:
+    """Return the claims of a valid access token, or None."""
     try:
         claims = jwt.decode(
             token,
             settings.jwt_secret.get_secret_value(),
             algorithms=[_JWT_ALGORITHM],
-            options={"require": ["sub", "exp", "type"]},
+            options={"require": ["sub", "exp", "iat", "type"]},
         )
         if claims["type"] != _ACCESS_TOKEN_TYPE:
             return None
-        return UUID(claims["sub"])
+        return AccessClaims(UUID(claims["sub"]), int(claims["iat"]))
     except jwt.InvalidTokenError, ValueError:
         return None
 

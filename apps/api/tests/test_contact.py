@@ -5,8 +5,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.config import Environment, Settings
+from khidmat_api.core.phone import normalize_phone
 from khidmat_api.modules.contact.models import ContactMessage
-from khidmat_api.modules.contact.schemas import normalize_phone
 from tests.conftest import build_settings
 
 URL = "/api/v1/contact-messages"

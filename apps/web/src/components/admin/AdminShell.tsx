@@ -3,29 +3,58 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Inbox, LayoutDashboard, LogOut, Menu, ScrollText, Tags, X, type LucideIcon } from "lucide-react";
-import { useCurrentUser, useLogout } from "@/features/auth/auth";
+import {
+  CalendarCheck,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquareWarning,
+  ScrollText,
+  Settings,
+  ShieldOff,
+  Stethoscope,
+  Tags,
+  UserCog,
+  UsersRound,
+  Wallet,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { isStaff, useCurrentUser, useLogout, type CurrentUser } from "@/features/auth/auth";
 import { useOverview } from "@/features/admin/api";
 import { LogoMark } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
-import { adminButton, ErrorState, Skeleton } from "./ui";
+import { adminButton, EmptyState, ErrorState, Skeleton } from "./ui";
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/admin/", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/messages/", label: "Messages", icon: Inbox },
-  { href: "/admin/catalog/", label: "Services & pricing", icon: Tags },
-  { href: "/admin/audit/", label: "Audit log", icon: ScrollText },
+const ACCOUNT_PATH = "/admin/account/";
+
+const NAV: { href: string; label: string; icon: LucideIcon; permission: string }[] = [
+  { href: "/admin/", label: "Overview", icon: LayoutDashboard, permission: "dashboard.view" },
+  { href: "/admin/bookings/", label: "Orders", icon: CalendarCheck, permission: "bookings.manage" },
+  { href: "/admin/providers/", label: "Physiotherapists", icon: Stethoscope, permission: "providers.verify" },
+  { href: "/admin/balances/", label: "Balances", icon: Wallet, permission: "finance.manage" },
+  { href: "/admin/complaints/", label: "Complaints", icon: MessageSquareWarning, permission: "complaints.manage" },
+  { href: "/admin/messages/", label: "Messages", icon: Inbox, permission: "messages.manage" },
+  { href: "/admin/catalog/", label: "Services & pricing", icon: Tags, permission: "catalog.manage" },
+  { href: "/admin/settings/", label: "Settings", icon: Settings, permission: "settings.manage" },
+  { href: "/admin/team/", label: "Team", icon: UsersRound, permission: "staff.manage" },
+  { href: "/admin/audit/", label: "Audit log", icon: ScrollText, permission: "audit.view" },
 ];
 
 // This guard only decides what to show. The API checks the session and role on every request.
 export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const me = useCurrentUser();
-  const allowed = me.data?.role === "ADMIN";
+  const allowed = isStaff(me.data);
+  const mustChange = Boolean(me.data?.must_change_password);
+  const onAccountPage = pathname.startsWith("/admin/account");
 
   useEffect(() => {
     if (me.isSuccess && !allowed) router.replace("/admin/login/");
-  }, [me.isSuccess, allowed, router]);
+    else if (allowed && mustChange && !onAccountPage) router.replace(ACCOUNT_PATH);
+  }, [me.isSuccess, allowed, mustChange, onAccountPage, router]);
 
   if (me.isError) {
     return (
@@ -34,7 +63,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </main>
     );
   }
-  if (!allowed) {
+  if (!allowed || !me.data || (mustChange && !onAccountPage)) {
     return (
       <div role="status" aria-label="Loading" className="flex min-h-dvh">
         <div className="hidden w-60 border-e border-stone-200 bg-white p-4 lg:block">
@@ -48,19 +77,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  return <Shell name={me.data?.name ?? me.data?.email ?? "Admin"}>{children}</Shell>;
+  return <Shell user={me.data}>{children}</Shell>;
 }
 
-function Shell({ name, children }: { name: string; children: ReactNode }) {
+function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
-  const overview = useOverview();
+  const locked = user.must_change_password;
+  const overview = useOverview(!locked);
   const [open, setOpen] = useState(false);
 
   const signOut = () => logout.mutate(undefined, { onSettled: () => router.replace("/admin/login/") });
   const newMessages = overview.data?.new_messages ?? 0;
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  const page = NAV.find((item) => item.href === normalized);
+  const denied = page !== undefined && !user.permissions.includes(page.permission);
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -72,7 +104,7 @@ function Shell({ name, children }: { name: string; children: ReactNode }) {
         </span>
       </div>
       <nav aria-label="Admin" className="flex-1 space-y-0.5 p-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.filter((item) => !locked && user.permissions.includes(item.permission)).map(({ href, label, icon: Icon }) => {
           const active = normalized === href;
           return (
             <Link
@@ -98,7 +130,14 @@ function Shell({ name, children }: { name: string; children: ReactNode }) {
         })}
       </nav>
       <div className="border-t border-stone-200 p-3">
-        <p className="truncate px-3 text-sm font-medium text-stone-900">{name}</p>
+        <Link
+          href={ACCOUNT_PATH}
+          onClick={() => setOpen(false)}
+          className="flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
+        >
+          <UserCog className="size-4 shrink-0" aria-hidden="true" />
+          <span className="truncate">{user.name ?? user.email ?? user.phone}</span>
+        </Link>
         <button
           type="button"
           onClick={signOut}
@@ -150,7 +189,17 @@ function Shell({ name, children }: { name: string; children: ReactNode }) {
           <LogoMark className="size-7" />
           <span className="font-bold tracking-tight text-stone-900">Admin</span>
         </header>
-        <main className="mx-auto max-w-6xl p-5 sm:p-8">{children}</main>
+        <main className="mx-auto max-w-6xl p-5 sm:p-8">
+          {denied ? (
+            <EmptyState
+              icon={ShieldOff}
+              title="You don't have access to this page"
+              description="Ask an admin if your role should include it."
+            />
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );

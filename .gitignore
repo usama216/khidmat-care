@@ -21,6 +21,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Local file uploads
+apps/api/.uploads/
+
 # Deploy tooling
 .vercel
 .wrangler

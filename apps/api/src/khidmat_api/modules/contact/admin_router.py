@@ -14,7 +14,7 @@ from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.audit.service import record_audit
 from khidmat_api.modules.contact.models import ContactMessage, ContactMessageStatus
-from khidmat_api.modules.identity.dependencies import AdminUserDep, SettingsDep
+from khidmat_api.modules.identity.dependencies import MessagesManagerDep, SettingsDep
 
 router = APIRouter(prefix="/admin/contact-messages", tags=["admin"])
 
@@ -44,7 +44,7 @@ def _escape_like(term: str) -> str:
 
 @router.get("", summary="List contact messages, newest first")
 async def list_messages(
-    _: AdminUserDep,
+    _: MessagesManagerDep,
     session: SessionDep,
     params: PageParamsDep,
     status: ContactMessageStatus | None = None,
@@ -83,7 +83,7 @@ async def list_messages(
 async def update_message(
     message_id: UUID,
     payload: ContactMessageUpdate,
-    admin: AdminUserDep,
+    admin: MessagesManagerDep,
     session: SessionDep,
     request: Request,
     settings: SettingsDep,

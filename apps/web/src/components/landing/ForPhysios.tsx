@@ -45,14 +45,17 @@ export function ForPhysios({ t }: { t: Dictionary }) {
                 ))}
               </ul>
               <p className="mt-5 text-sm text-stone-500">{p.note}</p>
+              <a href="/register/?role=physio" className={buttonClasses("primary", "lg", "mt-6 w-full")}>
+                {p.cta}
+              </a>
               <a
                 href={whatsappUrl(p.message)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonClasses("primary", "lg", "mt-6 w-full")}
+                className={buttonClasses("secondary", "md", "mt-3 w-full")}
               >
                 <WhatsAppIcon className="size-5" />
-                {p.cta}
+                {p.ctaWhatsapp}
               </a>
             </div>
           </div>
