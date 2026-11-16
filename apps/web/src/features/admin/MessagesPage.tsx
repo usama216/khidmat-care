@@ -17,6 +17,7 @@ import {
   Pagination,
   TableSkeleton,
 } from "@/components/admin/ui";
+import { clickableRow, OpenButton, useRowOpen } from "@/components/admin/records";
 import { cn } from "@/lib/cn";
 import { useMessages, useUpdateMessage, type ContactMessage, type MessageStatus } from "./api";
 
@@ -55,6 +56,7 @@ export function MessagesPage() {
 
   const messages = useMessages({ page, status, search: search || undefined });
   const items = messages.data?.items ?? [];
+  const openRow = useRowOpen();
   const open = items.find((item) => item.id === openId) ?? null;
 
   return (
@@ -126,19 +128,16 @@ export function MessagesPage() {
                     <th scope="col" className="px-5 py-2.5 text-end font-medium">
                       Received
                     </th>
+                    <th scope="col" className="w-px px-5 py-2.5">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {items.map((item) => (
-                    <tr key={item.id} className="transition hover:bg-stone-50">
+                    <tr key={item.id} onClick={openRow(() => setOpenId(item.id))} className={clickableRow}>
                       <td className="px-5 py-3 align-top">
-                        <button
-                          type="button"
-                          onClick={() => setOpenId(item.id)}
-                          className="text-start font-medium text-stone-900 hover:underline"
-                        >
-                          {item.name}
-                        </button>
+                        <p className="font-medium text-stone-900">{item.name}</p>
                         <p className="text-xs text-stone-500 tabular-nums">{item.phone}</p>
                       </td>
                       <td className="max-w-md px-5 py-3 align-top text-stone-600">
@@ -151,6 +150,9 @@ export function MessagesPage() {
                       </td>
                       <td className="px-5 py-3 text-end align-top text-xs whitespace-nowrap text-stone-500">
                         {formatDateTime(item.created_at)}
+                      </td>
+                      <td className="px-5 py-3 text-end align-top">
+                        <OpenButton onClick={() => setOpenId(item.id)} primary={item.status === "NEW"} />
                       </td>
                     </tr>
                   ))}

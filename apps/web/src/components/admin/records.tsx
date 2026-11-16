@@ -1,10 +1,46 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Card, Skeleton } from "./ui";
+import { adminButton, Card, Skeleton } from "./ui";
+
+/**
+ * Makes a whole table row open a record, without stealing clicks from links and buttons inside it.
+ * Keyboard users reach the same record through the row's "Open" button.
+ */
+export function useRowOpen() {
+  const router = useRouter();
+  return (open: string | (() => void)) => (event: MouseEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest("a, button, input, select, textarea, label")) return;
+    if (typeof open === "string") router.push(open);
+    else open();
+  };
+}
+
+export const clickableRow = "cursor-pointer transition hover:bg-brand-50/40";
+
+/** The visible way to open a record from a list. */
+export function OpenButton({ href, onClick, label = "Open", primary }: { href?: string; onClick?: () => void; label?: string; primary?: boolean }) {
+  const className = adminButton(primary ? "primary" : "secondary", "h-8 px-2.5 text-[0.8rem]");
+  const body = (
+    <>
+      {label}
+      <ChevronRight className="size-3.5 rtl:-scale-x-100" aria-hidden="true" />
+    </>
+  );
+  return href ? (
+    <Link href={href} className={className}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={className}>
+      {body}
+    </button>
+  );
+}
 
 /** Building blocks for record pages and dashboards, shared by staff and physiotherapist screens. */
 

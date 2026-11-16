@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BadgeCheck, Ban, CircleDot, Clock, Search, Star, X } from "lucide-react";
-import { RecordLink, Segmented } from "@/components/admin/records";
+import { clickableRow, OpenButton, RecordLink, Segmented, useRowOpen } from "@/components/admin/records";
 import {
   adminInput,
   Badge,
@@ -58,6 +58,7 @@ export function ProvidersPage() {
   const search = useDebounced(searchInput);
   const providers = useProviders({ page, status, search: search || undefined });
   const items = providers.data?.items ?? [];
+  const openRow = useRowOpen();
 
   return (
     <>
@@ -109,13 +110,16 @@ export function ProvidersPage() {
                     <th scope="col" className="px-5 py-2.5 text-start font-medium">Status</th>
                     <th scope="col" className="px-5 py-2.5 text-end font-medium">Rating</th>
                     <th scope="col" className="px-5 py-2.5 text-end font-medium">Balance</th>
+                    <th scope="col" className="w-px px-5 py-2.5">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {items.map((item) => (
-                    <tr key={item.id} className="transition hover:bg-stone-50">
+                    <tr key={item.id} onClick={openRow(physioHref(item.id))} className={clickableRow}>
                       <td className="px-5 py-3">
-                        <RecordLink href={physioHref(item.id)} className="text-stone-900">
+                        <RecordLink href={physioHref(item.id)}>
                           {item.name ?? item.phone}
                         </RecordLink>
                         <p className="text-xs text-stone-500 tabular-nums">{item.phone}</p>
@@ -146,6 +150,13 @@ export function ProvidersPage() {
                         )}
                       >
                         {formatPkr(item.balance_pkr)}
+                      </td>
+                      <td className="px-5 py-3 text-end">
+                        <OpenButton
+                          href={physioHref(item.id)}
+                          label={item.status === "PENDING" ? "Review" : "Open"}
+                          primary={item.status === "PENDING"}
+                        />
                       </td>
                     </tr>
                   ))}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { RecordLink, Segmented } from "@/components/admin/records";
+import { clickableRow, OpenButton, RecordLink, Segmented, useRowOpen } from "@/components/admin/records";
 import {
   adminInput,
   Card,
@@ -118,6 +118,9 @@ export function OrdersTable({
               ) : null}
               <th scope="col" className="px-5 py-2.5 text-start font-medium">Status</th>
               <th scope="col" className="px-5 py-2.5 text-end font-medium">Price</th>
+              <th scope="col" className="w-px px-5 py-2.5">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -139,10 +142,12 @@ export function OrdersTable({
 
 function OrderRow({ item, hide }: { item: StaffBooking; hide?: "patient" | "physio" }) {
   const done = item.sessions.filter((session) => session.status === "COMPLETED").length;
+  const openRow = useRowOpen();
+  const needsAction = item.status === "PENDING_ASSIGNMENT";
   return (
-    <tr className="transition hover:bg-stone-50">
+    <tr onClick={openRow(orderHref(item.id))} className={clickableRow}>
       <td className="px-5 py-3">
-        <RecordLink href={orderHref(item.id)} className="text-stone-900">
+        <RecordLink href={orderHref(item.id)}>
           KC-{item.number}
         </RecordLink>
         <p className="text-xs text-stone-500">
@@ -173,6 +178,9 @@ function OrderRow({ item, hide }: { item: StaffBooking; hide?: "patient" | "phys
         </p>
       </td>
       <td className="px-5 py-3 text-end text-stone-700 tabular-nums">{formatPkr(item.price_total_pkr)}</td>
+      <td className="px-5 py-3 text-end">
+        <OpenButton href={orderHref(item.id)} label={needsAction ? "Assign" : "Open"} primary={needsAction} />
+      </td>
     </tr>
   );
 }

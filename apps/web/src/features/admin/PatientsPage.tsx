@@ -5,13 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { CalendarCheck2, CircleDollarSign, Phone, Search, ShoppingBag, UsersRound, XCircle } from "lucide-react";
 import {
   BackLink,
+  clickableRow,
   DetailGrid,
   DetailItem,
   Initials,
+  OpenButton,
   RecordLink,
   RecordSkeleton,
   Section,
   StatCard,
+  useRowOpen,
 } from "@/components/admin/records";
 import {
   adminInput,
@@ -44,6 +47,7 @@ export function PatientsPage() {
   const search = useDebounced(searchInput);
   const accounts = usePatientAccounts({ page, search: search || undefined });
   const items = accounts.data?.items ?? [];
+  const openRow = useRowOpen();
 
   return (
     <>
@@ -85,16 +89,19 @@ export function PatientsPage() {
                     <th scope="col" className="px-5 py-2.5 text-start font-medium">Joined</th>
                     <th scope="col" className="px-5 py-2.5 text-end font-medium">People</th>
                     <th scope="col" className="px-5 py-2.5 text-end font-medium">Orders</th>
+                    <th scope="col" className="w-px px-5 py-2.5">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {items.map((item) => (
-                    <tr key={item.id} className="transition hover:bg-stone-50">
+                    <tr key={item.id} onClick={openRow(patientHref(item.id))} className={clickableRow}>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <Initials name={item.name} className="size-8 text-xs" />
                           <div>
-                            <RecordLink href={patientHref(item.id)} className="text-stone-900">
+                            <RecordLink href={patientHref(item.id)}>
                               {item.name ?? item.phone}
                             </RecordLink>
                             <p className="text-xs text-stone-500 tabular-nums">{item.phone}</p>
@@ -105,6 +112,9 @@ export function PatientsPage() {
                       <td className="px-5 py-3 text-stone-600">{formatDateTime(item.created_at)}</td>
                       <td className="px-5 py-3 text-end text-stone-700 tabular-nums">{item.people_count}</td>
                       <td className="px-5 py-3 text-end text-stone-700 tabular-nums">{item.orders_count}</td>
+                      <td className="px-5 py-3 text-end">
+                        <OpenButton href={patientHref(item.id)} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
