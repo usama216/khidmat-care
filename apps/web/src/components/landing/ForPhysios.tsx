@@ -1,9 +1,8 @@
 import { BadgeCheck, Check, FileCheck2, Stethoscope } from "lucide-react";
 import type { Dictionary } from "@/content/types";
-import { whatsappUrl } from "@/lib/whatsapp";
+import { localePath } from "@/lib/routes";
 import { buttonClasses } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 
 export function ForPhysios({ t }: { t: Dictionary }) {
   const p = t.physios;
@@ -49,13 +48,10 @@ export function ForPhysios({ t }: { t: Dictionary }) {
                 {p.cta}
               </a>
               <a
-                href={whatsappUrl(p.message)}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={localePath(t.locale, "/for-physiotherapists/")}
                 className={buttonClasses("secondary", "md", "mt-3 w-full")}
               >
-                <WhatsAppIcon className="size-5" />
-                {p.ctaWhatsapp}
+                {p.learnMore}
               </a>
             </div>
           </div>

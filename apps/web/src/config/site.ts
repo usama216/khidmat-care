@@ -20,15 +20,9 @@ export const site = {
   whatsappNumber: env(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER, "923000080216").replace(/\D/g, ""),
   phone,
   phoneDisplay: formatPakistaniPhone(phone),
-
-  // Package prices in PKR (total for the package). `null` shows "Price on WhatsApp".
-  // Fill these in after Phase 0 rates are agreed with the physiotherapists.
-  packagePrices: {
-    1: null,
-    5: null,
-    10: null,
-    15: null,
-  } as Record<PackageSize, number | null>,
+  supportEmail: env(process.env.NEXT_PUBLIC_SUPPORT_EMAIL, "support@khidmat.care"),
+  // Meta (Facebook/Instagram) Pixel for measuring ads. Not loaded when empty.
+  metaPixelId: env(process.env.NEXT_PUBLIC_META_PIXEL_ID, "").replace(/\D/g, ""),
 } as const;
 
 // "+923001234567" -> "+92 300 1234567"; anything else is shown as given.
@@ -36,9 +30,6 @@ function formatPakistaniPhone(value: string) {
   const digits = value.replace(/\D/g, "");
   return digits.length === 12 && digits.startsWith("92") ? `+92 ${digits.slice(2, 5)} ${digits.slice(5)}` : value;
 }
-
-export const packageSizes = [1, 5, 10, 15] as const;
-export type PackageSize = (typeof packageSizes)[number];
 
 // Suggestions for the area field. Patients can still type any area.
 export const lahoreAreas = [

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { HomeIcon, MessageCircle, UserCheck } from "lucide-react";
 import type { Dictionary } from "@/content/types";
+import { localePath } from "@/lib/routes";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { buttonClasses } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -8,7 +9,7 @@ import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 
 const icons = [MessageCircle, UserCheck, HomeIcon];
 
-export function HowItWorks({ t }: { t: Dictionary }) {
+export function HowItWorks({ t, more = false }: { t: Dictionary; more?: boolean }) {
   return (
     <section id="how" className="scroll-mt-20 border-y border-stone-200/70 bg-white py-24 sm:py-32">
       <div className="shell">
@@ -48,7 +49,7 @@ export function HowItWorks({ t }: { t: Dictionary }) {
           </ol>
         </div>
 
-        <div data-reveal className="mt-16 flex justify-center">
+        <div data-reveal className="mt-16 flex flex-col justify-center gap-3 sm:flex-row">
           <a
             href={whatsappUrl(t.hero.whatsappMessage)}
             target="_blank"
@@ -58,6 +59,11 @@ export function HowItWorks({ t }: { t: Dictionary }) {
             <WhatsAppIcon className="size-5" />
             {t.how.cta}
           </a>
+          {more ? (
+            <a href={localePath(t.locale, "/how-it-works/")} className={buttonClasses("secondary", "lg")}>
+              {t.how.more}
+            </a>
+          ) : null}
         </div>
       </div>
     </section>

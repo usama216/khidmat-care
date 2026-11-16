@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
 import { Bone, Brain, Dumbbell, Footprints, HandHeart, PersonStanding, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { serviceIds, type Dictionary, type ServiceId } from "@/content/types";
+import { localePath, servicePath } from "@/lib/routes";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { SelectServiceLink } from "./SelectServiceLink";
 
 export const serviceIcons: Record<ServiceId, LucideIcon> = {
   "post-surgery": Bone,
@@ -13,14 +14,30 @@ export const serviceIcons: Record<ServiceId, LucideIcon> = {
   sports: Dumbbell,
 };
 
-export function Services({ t }: { t: Dictionary }) {
+export function Services({
+  t,
+  exclude,
+  heading = true,
+  title,
+}: {
+  t: Dictionary;
+  exclude?: ServiceId;
+  heading?: boolean;
+  title?: string;
+}) {
   return (
     <section id="services" className="scroll-mt-20 py-24 sm:py-32">
       <div className="shell">
-        <SectionHeading eyebrow={t.services.eyebrow} title={t.services.title} subtitle={t.services.subtitle} />
+        {heading ? (
+          <SectionHeading
+            eyebrow={t.services.eyebrow}
+            title={title ?? t.services.title}
+            subtitle={title ? undefined : t.services.subtitle}
+          />
+        ) : null}
 
-        <ul className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {serviceIds.map((id, i) => {
+        <ul className={heading ? "mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" : "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"}>
+          {serviceIds.filter((id) => id !== exclude).map((id, i) => {
             const Icon = serviceIcons[id];
             const item = t.services.items[id];
             return (
@@ -31,7 +48,14 @@ export function Services({ t }: { t: Dictionary }) {
                   </div>
                   <h3 className="mt-6 text-xl font-semibold text-stone-900">{item.title}</h3>
                   <p className="mt-2.5 flex-1 leading-relaxed text-stone-600">{item.desc}</p>
-                  <SelectServiceLink serviceId={id} label={t.services.book} />
+                  <a
+                    href={localePath(t.locale, servicePath(id))}
+                    className="mt-6 inline-flex items-center gap-1.5 self-start rounded-full text-[0.95rem] font-semibold text-brand-700 transition hover:text-brand-900 after:absolute after:inset-0 after:rounded-[1.75rem]"
+                  >
+                    {t.services.learnMore}
+                    <span className="sr-only">: {item.title}</span>
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
+                  </a>
                 </article>
               </li>
             );

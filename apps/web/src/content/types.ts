@@ -14,22 +14,38 @@ export type GenderPreference = "any" | "female" | "male";
 export type TimePreference = "morning" | "afternoon" | "evening";
 
 type Item = { title: string; desc: string };
+type Qa = { q: string; a: string };
+type PageMeta = { title: string; description: string };
+
+export type PageKey = "home" | "services" | "howItWorks" | "physios" | "faq" | "contact" | "about";
+
+export type ServicePage = {
+  meta: PageMeta;
+  headline: string;
+  intro: string;
+  conditions: string[];
+  session: string[];
+  duration: string;
+  faqs: Qa[];
+};
 
 // Plain data only (no functions) so it can be passed to client components.
 export type Dictionary = {
   locale: Locale;
   dir: "ltr" | "rtl";
-  meta: { title: string; description: string };
+  meta: PageMeta;
+  pages: Record<PageKey, PageMeta>;
   nav: {
+    // Paths without the language prefix, e.g. "/services/".
     links: { href: string; label: string }[];
     physios: string;
     cta: string;
     openMenu: string;
     closeMenu: string;
     switchLabel: string;
-    switchHref: string;
     switchLang: Locale;
     skip: string;
+    home: string;
   };
   hero: {
     eyebrow: string;
@@ -59,30 +75,27 @@ export type Dictionary = {
     title: string;
     subtitle: string;
     book: string;
+    learnMore: string;
+    allServices: string;
     items: Record<ServiceId, Item>;
   };
-  how: { eyebrow: string; title: string; steps: Item[]; cta: string };
+  servicePage: {
+    conditionsTitle: string;
+    sessionTitle: string;
+    durationTitle: string;
+    faqTitle: string;
+    bookTreatment: string;
+    otherServices: string;
+    whatsappMessage: string;
+    pages: Record<ServiceId, ServicePage>;
+  };
+  how: { eyebrow: string; title: string; steps: Item[]; cta: string; more: string };
   why: {
     eyebrow: string;
     title: string;
     subtitle: string;
     featured: Item & { checklist: string[] };
     items: Item[];
-  };
-  packages: {
-    eyebrow: string;
-    title: string;
-    subtitle: string;
-    session: string;
-    sessions: string;
-    perSession: string;
-    priceOnRequest: string;
-    priceNote: string;
-    cta: string;
-    badge: string;
-    askMessage: string;
-    payment: string;
-    items: (Item & { count: 1 | 5 | 10 | 15; featured?: boolean })[];
   };
   families: {
     eyebrow: string;
@@ -138,9 +151,50 @@ export type Dictionary = {
     note: string;
     cta: string;
     ctaWhatsapp: string;
+    learnMore: string;
     message: string;
   };
-  faq: { eyebrow: string; title: string; moreTitle: string; moreCta: string; items: { q: string; a: string }[] };
+  physioPage: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    earnEyebrow: string;
+    earnTitle: string;
+    earnDesc: string;
+    // "{keep}" is replaced with the share a physiotherapist keeps, e.g. 80.
+    keepTemplate: string;
+    keepFallback: string;
+    commissionNote: string;
+    // "{amount}" is replaced with the minimum balance, e.g. Rs 700.
+    minimumTemplate: string;
+    earnPoints: string[];
+    stepsEyebrow: string;
+    stepsTitle: string;
+    steps: Item[];
+    rulesTitle: string;
+    rules: string[];
+    agreementLink: string;
+    faqTitle: string;
+    faqs: Qa[];
+    finalTitle: string;
+    finalDesc: string;
+  };
+  about: {
+    eyebrow: string;
+    title: string;
+    intro: string;
+    values: Item[];
+    teamTitle: string;
+    teamDesc: string;
+  };
+  faq: {
+    eyebrow: string;
+    title: string;
+    moreTitle: string;
+    moreCta: string;
+    seeAll: string;
+    items: Qa[];
+  };
   contact: {
     eyebrow: string;
     title: string;
@@ -165,6 +219,18 @@ export type Dictionary = {
     };
   };
   emergency: { title: string; text: string; call: string };
-  footer: { tagline: string; explore: string; contact: string; location: string; rights: string; disclaimer: string };
+  footer: {
+    tagline: string;
+    explore: string;
+    contact: string;
+    legal: string;
+    terms: string;
+    privacy: string;
+    physioAgreement: string;
+    englishOnly: string;
+    location: string;
+    rights: string;
+    disclaimer: string;
+  };
   mobileBar: { whatsapp: string; call: string };
 };

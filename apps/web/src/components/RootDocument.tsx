@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Dictionary } from "@/content/types";
 import { jakarta, nastaliq } from "@/lib/fonts";
 import { cn } from "@/lib/cn";
+import { MetaPixel } from "./MetaPixel";
 
 // The `js` class lets CSS hide scroll-reveal content only when JavaScript is running.
 const enableJs = "document.documentElement.classList.add('js')";
@@ -19,7 +20,10 @@ export function RootDocument({ t, children }: { t: Dictionary; children: ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: enableJs }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <MetaPixel />
+      </body>
     </html>
   );
 }

@@ -1,6 +1,9 @@
-import { Landing } from "@/components/landing/Landing";
+import { HomePage } from "@/components/pages/HomePage";
 import { en } from "@/content/en";
+import { pageMetadata } from "@/lib/metadata";
 
-export default function HomePage() {
-  return <Landing t={en} />;
+export const metadata = pageMetadata({ locale: "en", path: "/", ...en.pages.home });
+
+export default function Page() {
+  return <HomePage t={en} />;
 }

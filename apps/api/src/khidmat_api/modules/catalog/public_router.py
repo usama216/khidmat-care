@@ -86,6 +86,20 @@ async def catalog(session: SessionDep) -> CatalogResponse:
     )
 
 
+class PhysioTerms(BaseModel):
+    commission_bps: int | None
+    minimum_balance_pkr: int
+
+
+@public_router.get("/physio-terms", summary="Commission and minimum balance for physiotherapists")
+async def physio_terms(session: SessionDep) -> PhysioTerms:
+    # Shown on the public "for physiotherapists" page, so it always matches the dashboard.
+    platform = await get_platform_settings(session)
+    return PhysioTerms(
+        commission_bps=platform.commission_bps, minimum_balance_pkr=platform.minimum_balance_pkr
+    )
+
+
 class SettingsResponse(BaseModel):
     commission_bps: int | None
     minimum_balance_pkr: int

@@ -4,15 +4,20 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { Dictionary } from "@/content/types";
 import { cn } from "@/lib/cn";
+import { localePath } from "@/lib/routes";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { buttonClasses } from "@/components/ui/button";
 import { Logo } from "@/components/ui/Logo";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 
-export function Header({ t }: { t: Dictionary }) {
+/**
+ * `path` is the current page without the language prefix. `altHref` is the same page in the other
+ * language, or that language's home page when this page has no translation.
+ */
+export function Header({ t, path, altHref }: { t: Dictionary; path: string; altHref: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const home = t.locale === "en" ? "/" : "/ur/";
+  const links = [...t.nav.links, { href: "/for-physiotherapists/", label: t.nav.physios }];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -33,6 +38,7 @@ export function Header({ t }: { t: Dictionary }) {
   }, [open]);
 
   const close = () => setOpen(false);
+  const isActive = (href: string) => path === href || path.startsWith(href);
 
   return (
     <header
@@ -44,29 +50,29 @@ export function Header({ t }: { t: Dictionary }) {
       )}
     >
       <div className="shell flex h-[4.25rem] items-center justify-between gap-4">
-        <Logo href={home} />
+        <Logo href={localePath(t.locale, "/")} />
 
-        <nav aria-label="Main" className="hidden items-center gap-1 xl:flex">
-          {t.nav.links.map((link) => (
+        <nav aria-label="Main" className="hidden items-center gap-0.5 xl:flex">
+          {links.map((link) => (
             <a
               key={link.href}
-              href={link.href}
-              className="rounded-full px-4 py-2 text-[0.95rem] font-medium text-stone-600 transition hover:bg-stone-900/5 hover:text-stone-900"
+              href={localePath(t.locale, link.href)}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={cn(
+                "rounded-full px-3.5 py-2 text-[0.95rem] font-medium transition",
+                isActive(link.href)
+                  ? "bg-brand-50 text-brand-800"
+                  : "text-stone-600 hover:bg-stone-900/5 hover:text-stone-900",
+              )}
             >
               {link.label}
             </a>
           ))}
-          <a
-            href="#physios"
-            className="rounded-full px-4 py-2 text-[0.95rem] font-medium text-stone-600 transition hover:bg-stone-900/5 hover:text-stone-900"
-          >
-            {t.nav.physios}
-          </a>
         </nav>
 
         <div className="flex items-center gap-2">
           <a
-            href={t.nav.switchHref}
+            href={altHref}
             hrefLang={t.nav.switchLang}
             lang={t.nav.switchLang}
             className={cn(
@@ -106,12 +112,13 @@ export function Header({ t }: { t: Dictionary }) {
         className="h-[calc(100dvh-4.25rem)] overflow-y-auto border-t border-stone-200/80 bg-sand-50 xl:hidden"
       >
         <nav aria-label="Mobile" className="shell flex flex-col gap-1 py-6">
-          {[...t.nav.links, { href: "#physios", label: t.nav.physios }].map((link) => (
+          {[{ href: "/", label: t.nav.home }, ...links].map((link) => (
             <a
               key={link.href}
-              href={link.href}
+              href={localePath(t.locale, link.href)}
               onClick={close}
-              className="rounded-2xl px-4 py-4 text-xl font-semibold text-stone-800 transition hover:bg-white"
+              aria-current={path === link.href || (link.href !== "/" && isActive(link.href)) ? "page" : undefined}
+              className="rounded-2xl px-4 py-4 text-xl font-semibold text-stone-800 transition hover:bg-white aria-[current=page]:bg-white aria-[current=page]:text-brand-800"
             >
               {link.label}
             </a>

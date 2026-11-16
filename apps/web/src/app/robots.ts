@@ -8,7 +8,12 @@ export default function robots(): MetadataRoute.Robots {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
   return {
-    rules: { userAgent: "*", allow: "/", disallow: "/admin/" },
+    // Signed-in areas have nothing for search engines and shouldn't appear in results.
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/admin/", "/physio/", "/my/", "/book/", "/login/", "/register/"],
+    },
     sitemap: `${site.url}/sitemap.xml`,
   };
 }

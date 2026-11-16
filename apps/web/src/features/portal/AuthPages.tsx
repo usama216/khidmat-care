@@ -9,6 +9,7 @@ import { z } from "zod";
 import { adminButton, adminInput, errorMessage, FormError, FormField } from "@/components/admin/ui";
 import { LogoMark } from "@/components/ui/Logo";
 import { type CurrentUser, loginSchema, useCurrentUser, useLogin } from "@/features/auth/auth";
+import { track } from "@/lib/analytics";
 import { type ApiError, apiPost } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { homeFor } from "./PortalShell";
@@ -132,7 +133,11 @@ export function PortalRegister() {
 
   const register = useMutation<CurrentUser, ApiError, typeof values & { role: string }>({
     mutationFn: (body) => apiPost<CurrentUser>("/auth/register", body),
-    onSuccess: (user) => client.setQueryData(["auth", "me"], user),
+    onSuccess: (user) => {
+      // Ads measure sign-ups by role only, never by who signed up.
+      track("CompleteRegistration", { content_name: user.role === "PROVIDER" ? "physiotherapist" : "patient" });
+      client.setQueryData(["auth", "me"], user);
+    },
   });
 
   useEffect(() => {

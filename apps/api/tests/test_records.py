@@ -175,3 +175,11 @@ async def test_physio_dashboard_counts_work_and_money(world: World) -> None:
 
 async def test_only_physios_have_a_dashboard(world: World) -> None:
     assert (await world.patient.get(f"{API}/provider/dashboard")).status_code == 403
+
+
+async def test_public_physio_terms_follow_the_dashboard(world: World) -> None:
+    await world.admin.patch(
+        f"{API}/admin/settings", json={"commission_bps": 1500, "minimum_balance_pkr": 900}
+    )
+    terms = (await world.patient.get(f"{API}/catalog/physio-terms")).json()
+    assert terms == {"commission_bps": 1500, "minimum_balance_pkr": 900}

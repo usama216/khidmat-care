@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "../globals.css";
 import { AdminProviders } from "@/components/admin/AdminProviders";
+import { MetaPixel } from "@/components/MetaPixel";
 import { jakarta } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={jakarta.variable}>
       <body className="bg-stone-50 text-[0.9375rem]">
         <AdminProviders>{children}</AdminProviders>
+        <MetaPixel />
       </body>
     </html>
   );

@@ -1,6 +1,9 @@
-import { Landing } from "@/components/landing/Landing";
+import { HomePage } from "@/components/pages/HomePage";
 import { ur } from "@/content/ur";
+import { pageMetadata } from "@/lib/metadata";
 
-export default function UrduHomePage() {
-  return <Landing t={ur} />;
+export const metadata = pageMetadata({ locale: "ur", path: "/", ...ur.pages.home });
+
+export default function Page() {
+  return <HomePage t={ur} />;
 }
