@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/cn";
 import { formatPkr } from "@/lib/format";
 import { OrdersTable, patientHref, useDebounced } from "./BookingsPage";
+import { ChangePhoneButton } from "./ChangePhoneDialog";
 import { type PatientAccountDetail, usePatientAccount, usePatientAccounts } from "./operationsApi";
 
 const RELATION: Record<string, string> = {
@@ -168,10 +169,13 @@ function PatientRecord({ data }: { data: PatientAccountDetail }) {
             <h1 className="text-[1.45rem] font-semibold tracking-tight text-stone-900">{data.name ?? "Unnamed"}</h1>
             {!data.is_active ? <Badge>Inactive</Badge> : null}
           </div>
-          <a href={`tel:${data.phone}`} className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-stone-700 tabular-nums hover:underline">
-            <Phone className="size-3.5" aria-hidden="true" />
-            {data.phone}
-          </a>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <a href={`tel:${data.phone}`} className="inline-flex items-center gap-1.5 text-sm text-stone-700 tabular-nums hover:underline">
+              <Phone className="size-3.5" aria-hidden="true" />
+              {data.phone}
+            </a>
+            <ChangePhoneButton kind="patient" id={data.id} current={data.phone} />
+          </div>
         </div>
       </div>
 

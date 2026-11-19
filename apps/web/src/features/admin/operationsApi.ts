@@ -383,6 +383,13 @@ export function useAssignProvider() {
   );
 }
 
+export function useChangePhone() {
+  return useAdminMutation(
+    ({ kind, id, phone, reason }: { kind: "provider" | "patient"; id: string; phone: string; reason: string }) =>
+      apiPost<{ phone: string }>(`/admin/${kind === "provider" ? "providers" : "patients"}/${id}/phone`, { phone, reason }),
+  );
+}
+
 export function useUpdateHold() {
   return useAdminMutation(({ id, action, hours }: { id: string; action: "extend" | "release"; hours?: number }) =>
     apiPost(`/admin/bookings/${id}/hold`, { action, hours }),

@@ -51,6 +51,7 @@ import { cn } from "@/lib/cn";
 import { todayKey, weekStart } from "@/lib/dates";
 import { formatPkr } from "@/lib/format";
 import { useRecordHistory } from "./api";
+import { ChangePhoneButton } from "./ChangePhoneDialog";
 import { OrdersTable, orderHref } from "./BookingsPage";
 import { ComplaintItem, ReviewItem } from "./ComplaintsPage";
 import { TopupStatusBadge } from "./FinancePages";
@@ -140,10 +141,13 @@ function ProviderRecord({ data }: { data: ProviderDetail }) {
             <p className="mt-0.5 text-sm text-stone-500">
               {data.qualification} · {data.experience_years} years · {data.gender === "FEMALE" ? "Female" : "Male"}
             </p>
-            <a href={`tel:${data.phone}`} className="mt-1 inline-flex items-center gap-1.5 text-sm text-stone-700 tabular-nums hover:underline">
-              <Phone className="size-3.5" aria-hidden="true" />
-              {data.phone}
-            </a>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <a href={`tel:${data.phone}`} className="inline-flex items-center gap-1.5 text-sm text-stone-700 tabular-nums hover:underline">
+                <Phone className="size-3.5" aria-hidden="true" />
+                {data.phone}
+              </a>
+              {can("providers.verify") ? <ChangePhoneButton kind="provider" id={data.id} current={data.phone} /> : null}
+            </div>
           </div>
         </div>
         <Decisions data={data} />
@@ -665,6 +669,7 @@ function FeedbackTab({ providerId, complaints }: { providerId: string; complaint
 
 const HISTORY_LABELS: Record<string, { label: string; icon: LucideIcon }> = {
   "provider.submitted": { label: "Application submitted", icon: FileText },
+  "user.phone_changed": { label: "Phone number changed", icon: Phone },
   "provider.check_updated": { label: "Verification check updated", icon: CheckCircle2 },
   "provider.approve": { label: "Approved", icon: ShieldCheck },
   "provider.reject": { label: "Rejected", icon: ShieldCheck },
@@ -696,7 +701,9 @@ function HistoryTab({ providerId }: { providerId: string }) {
                 ? `${CHECK_LABELS[String(meta.check)] ?? String(meta.check)}: ${meta.done ? "ticked" : "unticked"}`
                 : typeof meta.amount_pkr === "number"
                   ? [formatPkr(meta.amount_pkr), meta.note].filter(Boolean).join(": ")
-                  : typeof meta.reason === "string"
+                  : entry.action === "user.phone_changed"
+                    ? `${String(meta.from)} to ${String(meta.to)}${meta.reason ? `: ${String(meta.reason)}` : ""}`
+                    : typeof meta.reason === "string"
                     ? meta.reason
                     : null;
             return (

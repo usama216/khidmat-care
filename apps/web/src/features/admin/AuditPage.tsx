@@ -19,6 +19,7 @@ const ACTION_LABELS: Record<string, string> = {
   "auth.login_failed": "Failed sign-in",
   "auth.registered": "New account registered",
   "auth.password_changed": "Password changed",
+  "user.phone_changed": "Phone number changed",
   "staff.created": "Staff added",
   "staff.updated": "Staff updated",
   "staff.password_reset": "Staff password reset",

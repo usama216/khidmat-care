@@ -11,7 +11,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.config import Settings
-from khidmat_api.core.errors import ConflictError, RateLimitedError, UnauthorizedError
+from khidmat_api.core.errors import (
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    UnauthorizedError,
+)
 from khidmat_api.core.phone import normalize_phone
 from khidmat_api.core.requests import hash_ip
 from khidmat_api.modules.audit.service import record_audit
@@ -265,3 +270,56 @@ async def change_password(
     await session.commit()
     await session.refresh(user)
     return tokens
+
+
+async def change_phone(
+    session: AsyncSession,
+    user_id: UUID,
+    new_phone: str,
+    *,
+    role: Role,
+    reason: str,
+    actor: User,
+    ip_address: str,
+    audit_entity: tuple[str, str] | None = None,
+) -> User:
+    """Staff change an account's phone after confirming who is asking.
+
+    The phone is the login, the WhatsApp alert number and the number shared before visits, so
+    every change is audited with both numbers, and the account is signed out everywhere.
+    """
+    user = await session.get(User, user_id, with_for_update=True)
+    if user is None or user.role != role:
+        raise NotFoundError("This account was not found.")
+    try:
+        phone = normalize_phone(new_phone)
+    except ValueError as exc:
+        raise ConflictError("Enter a valid phone number, e.g. 0300 1234567.") from exc
+    if phone == user.phone:
+        raise ConflictError("This is already their number.")
+    if await session.scalar(select(User.id).where(User.phone == phone)) is not None:
+        raise ConflictError("This number already belongs to another account.")
+
+    previous = user.phone
+    user.phone = phone
+    await session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=datetime.now(UTC))
+    )
+    entity_type, entity_id = audit_entity or ("user", str(user.id))
+    record_audit(
+        session,
+        actor_id=actor.id,
+        action="user.phone_changed",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        metadata={"from": previous, "to": phone, "reason": reason},
+        ip_address=ip_address,
+    )
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ConflictError("This number already belongs to another account.") from exc
+    return user

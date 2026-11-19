@@ -33,8 +33,10 @@ from khidmat_api.modules.identity.dependencies import (
     SettingsDep,
     require_any_permission,
 )
-from khidmat_api.modules.identity.models import User
+from khidmat_api.modules.identity.models import Role, User
 from khidmat_api.modules.identity.permissions import Permission
+from khidmat_api.modules.identity.schemas import PhoneChangeRequest, PhoneChangeResponse
+from khidmat_api.modules.identity.service import change_phone
 from khidmat_api.modules.providers.models import (
     Availability,
     DocumentType,
@@ -685,6 +687,29 @@ async def provider_calendar_admin(
 ) -> CalendarView:
     provider, _user = await get_provider_admin(session, provider_id)
     return await provider_calendar(session, provider, start, days)
+
+
+@admin_router.post("/{provider_id}/phone", summary="Change a physiotherapist's phone number")
+async def change_provider_phone(
+    provider_id: UUID,
+    payload: PhoneChangeRequest,
+    actor: ProviderVerifierDep,
+    session: SessionDep,
+    request: Request,
+    settings: SettingsDep,
+) -> PhoneChangeResponse:
+    provider, user = await get_provider_admin(session, provider_id)
+    changed = await change_phone(
+        session,
+        user.id,
+        payload.phone,
+        role=Role.PROVIDER,
+        reason=payload.reason,
+        actor=actor,
+        ip_address=client_ip(request, settings),
+        audit_entity=("provider", str(provider.id)),
+    )
+    return PhoneChangeResponse(phone=changed.phone)
 
 
 @admin_router.put("/{provider_id}/checks/{check}", summary="Tick or untick a verification check")

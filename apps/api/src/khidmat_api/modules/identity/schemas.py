@@ -42,6 +42,18 @@ class RegisterRequest(BaseModel):
         return normalize_phone(value)
 
 
+class PhoneChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    phone: Annotated[str, Field(min_length=7, max_length=32)]
+    # How staff confirmed it's really them, e.g. "Called from the old number".
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=300)]
+
+
+class PhoneChangeResponse(BaseModel):
+    phone: str
+
+
 class ChangePasswordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

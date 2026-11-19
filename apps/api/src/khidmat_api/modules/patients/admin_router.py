@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 
@@ -12,9 +12,12 @@ from khidmat_api.core.database import SessionDep
 from khidmat_api.core.errors import NotFoundError
 from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.phone import like_patterns
+from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.bookings.models import Booking, BookingStatus
-from khidmat_api.modules.identity.dependencies import BookingManagerDep
+from khidmat_api.modules.identity.dependencies import BookingManagerDep, SettingsDep
 from khidmat_api.modules.identity.models import Role, User
+from khidmat_api.modules.identity.schemas import PhoneChangeRequest, PhoneChangeResponse
+from khidmat_api.modules.identity.service import change_phone
 from khidmat_api.modules.patients.models import Patient
 from khidmat_api.modules.patients.router import PatientView
 
@@ -150,3 +153,24 @@ async def account_detail(
         spent_pkr=int(spent or 0),
         people=people_list,
     )
+
+
+@router.post("/{user_id}/phone", summary="Change a patient account's phone number")
+async def change_patient_phone(
+    user_id: UUID,
+    payload: PhoneChangeRequest,
+    actor: BookingManagerDep,
+    session: SessionDep,
+    request: Request,
+    settings: SettingsDep,
+) -> PhoneChangeResponse:
+    changed = await change_phone(
+        session,
+        user_id,
+        payload.phone,
+        role=Role.PATIENT,
+        reason=payload.reason,
+        actor=actor,
+        ip_address=client_ip(request, settings),
+    )
+    return PhoneChangeResponse(phone=changed.phone)
