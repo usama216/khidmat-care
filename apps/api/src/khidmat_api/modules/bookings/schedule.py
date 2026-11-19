@@ -203,8 +203,14 @@ async def require_free_slot(
     *,
     ignore_session: UUID | None = None,
     ignore_booking: UUID | None = None,
+    within_hours: bool = True,
 ) -> None:
-    if not fits_weekly_hours(await get_availability(session, provider.id), start_at, minutes):
+    """Free means no session, waiting offer or time off then. Booking from a calendar also needs
+    the time inside weekly hours; an open request picked by the physio doesn't, because picking
+    it is their own yes to that time."""
+    if within_hours and not fits_weekly_hours(
+        await get_availability(session, provider.id), start_at, minutes
+    ):
         raise ConflictError("The physiotherapist isn't available at this time.")
     interval = (start_at, start_at + timedelta(minutes=minutes))
     if await time_off_intervals(session, provider.id, *interval):

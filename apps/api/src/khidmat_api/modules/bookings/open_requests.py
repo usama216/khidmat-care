@@ -92,7 +92,8 @@ async def _passed_on(session: AsyncSession, booking_id: UUID) -> set[UUID]:
 async def matching_providers(
     session: AsyncSession, booking: Booking, *, limit: int
 ) -> list[tuple[Provider, User]]:
-    """Who to alert: treats this, works in this area, can be booked, and is free at that time."""
+    """Who to alert: treats this problem, covers this area, can be booked, and has no other visit
+    or time off then. Weekly hours don't limit alerts: a physio may take a request outside them."""
     minimum = (await get_platform_settings(session)).minimum_balance_pkr
     passed = await _passed_on(session, booking.id)
     rows = await session.execute(
@@ -116,7 +117,11 @@ async def matching_providers(
             continue
         try:
             await require_free_slot(
-                session, provider, booking.preferred_start_at, provider.slot_minutes
+                session,
+                provider,
+                booking.preferred_start_at,
+                provider.slot_minutes,
+                within_hours=False,
             )
         except ConflictError:
             continue
@@ -278,10 +283,14 @@ async def list_open_requests(session: AsyncSession, provider: Provider) -> list[
         else:
             try:
                 await require_free_slot(
-                    session, provider, booking.preferred_start_at, provider.slot_minutes
+                    session,
+                    provider,
+                    booking.preferred_start_at,
+                    provider.slot_minutes,
+                    within_hours=False,
                 )
             except ConflictError:
-                reason = "You aren't free at this time."
+                reason = "You have another visit or time off then."
         patient = await session.get(Patient, booking.patient_id)
         service = await session.get(ServiceType, booking.service_type_id)
         area = await session.get(Area, booking.area_id)
@@ -321,6 +330,7 @@ async def pick_open_request(
         booking.preferred_start_at,
         booking.visit_type,
         ignore_booking=booking.id,
+        within_hours=False,
     )
     now = datetime.now(UTC)
     _price_from(picked, booking)
@@ -448,6 +458,7 @@ async def check_alerts(session: AsyncSession, booking: Booking) -> list[AlertChe
                 booking.preferred_start_at,
                 provider.slot_minutes,
                 ignore_booking=booking.id,
+                within_hours=False,
             )
         except ConflictError as exc:
             reasons.append(f"Not free then: {exc.message}")

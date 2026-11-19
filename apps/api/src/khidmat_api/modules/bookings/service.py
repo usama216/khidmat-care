@@ -99,6 +99,7 @@ async def _require_bookable_provider(
     visit_type: VisitType,
     *,
     ignore_booking: UUID | None = None,
+    within_hours: bool = True,
 ) -> Provider:
     provider = await session.get(Provider, provider_id)
     if provider is None or provider.status != ProviderStatus.APPROVED:
@@ -117,7 +118,12 @@ async def _require_bookable_provider(
     elif not provider.visit_clinic:
         raise ConflictError("This physiotherapist only does home visits.")
     await require_free_slot(
-        session, provider, start_at, provider.slot_minutes, ignore_booking=ignore_booking
+        session,
+        provider,
+        start_at,
+        provider.slot_minutes,
+        ignore_booking=ignore_booking,
+        within_hours=within_hours,
     )
     return provider
 

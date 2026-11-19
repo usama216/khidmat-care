@@ -16,7 +16,7 @@ export function FindPhysioPage() {
         crumbs={[{ label: t.nav.find, path: findPhysioPath }]}
         eyebrow="Verified physiotherapists in Lahore"
         title="Find a physiotherapist and book a time"
-        lead="Compare experience, fees and ratings, then pick a free slot from their calendar. Prefer to let us choose? Tell us what you need and we'll show who's free."
+        lead="Compare experience, fees and ratings, then pick a free slot from their calendar. Not sure who to choose? Send a request and physiotherapists near you will respond."
       />
       <PhysioDirectory />
     </SiteShell>

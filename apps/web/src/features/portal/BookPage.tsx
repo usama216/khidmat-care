@@ -20,7 +20,17 @@ import { type CurrentUser, useCurrentUser } from "@/features/auth/auth";
 import { ApiError, apiPost } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
-import { addDays, dayKey, formatDayLong, formatDayShort, formatTime, lahoreIso, minuteLabel, todayKey } from "@/lib/dates";
+import {
+  addDays,
+  dayKey,
+  formatDayLong,
+  formatDayShort,
+  formatTime,
+  lahoreIso,
+  minuteLabel,
+  minuteOfDay,
+  todayKey,
+} from "@/lib/dates";
 import { formatPkr } from "@/lib/format";
 import {
   type CatalogService,
@@ -54,8 +64,8 @@ const RELATIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
-// Times offered when asking the team to find someone.
-const REQUEST_TIMES = Array.from({ length: 13 }, (_, index) => 480 + index * 60); // 8am to 8pm.
+// Times offered for a request, every hour from 7 am to 9 pm.
+const REQUEST_TIMES = Array.from({ length: 15 }, (_, index) => 420 + index * 60);
 
 type Errors = Partial<Record<string, string>>;
 
@@ -163,7 +173,11 @@ function BookForm({
   const [startAt, setStartAt] = useState<string | null>(params.get("start"));
   const [changingTime, setChangingTime] = useState(!params.get("start"));
   const [requestDay, setRequestDay] = useState(() => dayKey(params.get("start") ?? lahoreIso(addDays(todayKey(), 1), 600)));
-  const [requestMinute, setRequestMinute] = useState(600);
+  const [requestMinute, setRequestMinute] = useState(() => {
+    const start = params.get("start");
+    const minute = start ? minuteOfDay(start) : 600;
+    return REQUEST_TIMES.includes(minute) ? minute : 600;
+  });
 
   const areas = physio && visit === "HOME" ? allAreas.filter((item) => physio.area_ids.includes(item.id)) : allAreas;
   const [areaId, setAreaId] = useState(() => {

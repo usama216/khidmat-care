@@ -1,23 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Search, Sparkles, UsersRound } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Send, Sparkles, UsersRound } from "lucide-react";
 import { AdminProviders } from "@/components/admin/AdminProviders";
 import { buttonClasses } from "@/components/ui/button";
-import {
-  type Catalog,
-  type MatchQuery,
-  type VisitType,
-  useCatalog,
-  useMatchPhysios,
-  usePhysios,
-} from "@/features/portal/api";
-import { PhysioPhoto } from "@/features/portal/FindPage";
+import { type Catalog, useCatalog, usePhysios } from "@/features/portal/api";
 import { cn } from "@/lib/cn";
-import { addDays, formatDayShort, formatTime, lahoreIso, todayKey } from "@/lib/dates";
-import { formatPkr } from "@/lib/format";
-import { PhysioCard, physioProfileHref, Rating } from "./PhysioCard";
+import { addDays, formatDayShort, lahoreIso, minuteLabel, todayKey } from "@/lib/dates";
+import { PhysioCard } from "./PhysioCard";
 
 const field =
   "h-12 w-full rounded-2xl bg-white px-4 text-[0.95rem] text-stone-900 ring-1 ring-stone-300/80 outline-none transition focus:ring-2 focus:ring-brand-600";
@@ -105,7 +96,7 @@ function Directory() {
             <div className="rounded-3xl border border-dashed border-stone-300 p-10 text-center">
               <UsersRound className="mx-auto size-8 text-stone-400" aria-hidden="true" />
               <p className="mt-3 font-semibold text-stone-900">No physiotherapist matches these filters yet</p>
-              <p className="mt-1 text-sm text-stone-600">Try another area, or tell us what you need below and our team will find someone.</p>
+              <p className="mt-1 text-sm text-stone-600">Try another area, or send a request below and physiotherapists near you will respond.</p>
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -122,77 +113,58 @@ function Directory() {
         </div>
       </section>
 
-      {catalog.data ? <MatchSection catalog={catalog.data} /> : null}
+      {catalog.data ? <RequestSection catalog={catalog.data} /> : null}
     </>
   );
 }
 
-const WINDOWS = [
-  { value: "any", label: "Any time", from: 0, to: 1440 },
-  { value: "morning", label: "Morning (before 12)", from: 0, to: 720 },
-  { value: "afternoon", label: "Afternoon (12 to 5)", from: 720, to: 1020 },
-  { value: "evening", label: "Evening (after 5)", from: 1020, to: 1440 },
-] as const;
+// Times a request can ask for, every hour from 7 am to 9 pm.
+const REQUEST_TIMES = Array.from({ length: 15 }, (_, index) => 420 + index * 60);
 
-/** "I just need a physio": everyone who fits the problem, area and time, with their free slots. */
-function MatchSection({ catalog }: { catalog: Catalog }) {
+/**
+ * "I just need a physio": the patient says what, where and when, and sends a request. Every
+ * physiotherapist who treats that problem in that area gets a WhatsApp, and the first to pick it
+ * is booked. No list of physios here: that's what the section above is for.
+ */
+function RequestSection({ catalog }: { catalog: Catalog }) {
+  const router = useRouter();
   const today = todayKey();
   const days = Array.from({ length: 14 }, (_, index) => addDays(today, index));
   const [service, setService] = useState("");
   const [area, setArea] = useState("");
   const [day, setDay] = useState(addDays(today, 1));
-  const [timeWindow, setTimeWindow] = useState<(typeof WINDOWS)[number]["value"]>("any");
-  const [visit, setVisit] = useState<VisitType>("HOME");
-  const [query, setQuery] = useState<MatchQuery | null>(null);
+  const [minute, setMinute] = useState(17 * 60);
   const [missing, setMissing] = useState(false);
-  const matches = useMatchPhysios(query);
-  const chosenWindow = WINDOWS.find((item) => item.value === timeWindow) ?? WINDOWS[0];
 
-  const search = () => {
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
     if (!service || !area) {
       setMissing(true);
       return;
     }
-    setMissing(false);
-    setQuery({
-      service_id: service,
-      area_id: area,
-      day,
-      from_minute: chosenWindow.from,
-      to_minute: chosenWindow.to,
-      visit_type: visit,
-    });
+    const query = new URLSearchParams({ request: "1", service, area, start: lahoreIso(day, minute) });
+    router.push(`/book/?${query}`);
   };
 
-  // Without a match, the request goes to our team at the start of the chosen window.
-  const requestStart = lahoreIso(day, timeWindow === "any" ? 600 : Math.max(chosenWindow.from, 540));
-  const requestHref = `/book/?${new URLSearchParams({
-    request: "1",
-    service,
-    area,
-    start: requestStart,
-  })}`;
-
   return (
-    <section id="match" className="border-t border-stone-200/70 bg-sand-50" aria-labelledby="match-title">
+    <section id="request" className="border-t border-stone-200/70 bg-sand-50" aria-labelledby="request-title">
       <div className="shell py-14 sm:py-20">
         <p className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-brand-700 uppercase">
           <Sparkles className="size-4" aria-hidden="true" />
           Not sure who to choose?
         </p>
-        <h2 id="match-title" className="mt-3 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
-          Tell us what you need. We&apos;ll show who&apos;s free.
+        <h2 id="request-title" className="mt-3 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
+          Send a request. Physiotherapists near you will respond.
         </h2>
         <p className="mt-2 max-w-2xl text-stone-600">
-          We match your problem, area and time with physiotherapists who treat it, cover your area and have a free slot.
+          Tell us the problem, your area and a time. We alert verified physiotherapists who treat it in your area, and
+          the first one to pick your request is booked. You&apos;ll see their name and fee straight away.
         </p>
 
         <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            search();
-          }}
-          className="mt-8 grid grid-cols-1 gap-3 rounded-3xl bg-white p-4 ring-1 ring-stone-200 sm:grid-cols-2 lg:grid-cols-6"
+          onSubmit={onSubmit}
+          onChange={() => setMissing(false)}
+          className="mt-8 grid grid-cols-1 gap-3 rounded-3xl bg-white p-4 ring-1 ring-stone-200 sm:grid-cols-2 lg:grid-cols-5"
         >
           <select aria-label="Problem" value={service} onChange={(e) => setService(e.target.value)} className={cn(field, "lg:col-span-2")}>
             <option value="">What&apos;s the problem?</option>
@@ -217,100 +189,23 @@ function MatchSection({ catalog }: { catalog: Catalog }) {
               </option>
             ))}
           </select>
-          <select
-            aria-label="Time of day"
-            value={timeWindow}
-            onChange={(e) => setTimeWindow(e.target.value as typeof timeWindow)}
-            className={field}
-          >
-            {WINDOWS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
+          <select aria-label="Time" value={minute} onChange={(e) => setMinute(Number(e.target.value))} className={field}>
+            {REQUEST_TIMES.map((value) => (
+              <option key={value} value={value}>
+                {minuteLabel(value)}
               </option>
             ))}
           </select>
-          {catalog.clinic_visits ? (
-            <select aria-label="Home or clinic" value={visit} onChange={(e) => setVisit(e.target.value as VisitType)} className={field}>
-              <option value="HOME">Home visit</option>
-              <option value="CLINIC">Clinic visit</option>
-            </select>
-          ) : null}
-          <button type="submit" className={buttonClasses("primary", "md", "h-12 w-full")}>
-            <Search className="size-4.5" aria-hidden="true" />
-            Find who&apos;s free
+          <button type="submit" className={buttonClasses("primary", "md", "h-12 w-full sm:col-span-2 lg:col-span-5")}>
+            <Send className="size-4.5" aria-hidden="true" />
+            Continue to send my request
           </button>
           {missing ? (
-            <p role="alert" className="text-sm font-medium text-red-700 sm:col-span-2 lg:col-span-6">
+            <p role="alert" className="text-sm font-medium text-red-700 sm:col-span-2 lg:col-span-5">
               Choose the problem and your area first.
             </p>
           ) : null}
         </form>
-
-        <div className="mt-8" aria-live="polite">
-          {query === null ? null : matches.isPending ? (
-            <div className="h-40 animate-pulse rounded-3xl bg-stone-100" />
-          ) : matches.isError ? (
-            <p className="rounded-3xl bg-red-50 p-6 text-red-800">Something went wrong. Please try again.</p>
-          ) : matches.data.length === 0 ? (
-            <div className="rounded-3xl bg-white p-6 ring-1 ring-stone-200 sm:p-8">
-              <p className="text-lg font-semibold text-stone-900">No one is free at that time</p>
-              <p className="mt-1 text-stone-600">
-                Try another day or time. Or send your request to our team, and we&apos;ll find a physiotherapist for you.
-              </p>
-              {visit === "HOME" ? (
-                <Link href={requestHref} className={buttonClasses("primary", "md", "mt-5")}>
-                  Send my request to the team
-                </Link>
-              ) : null}
-            </div>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-stone-600">
-                {matches.data.length} {matches.data.length === 1 ? "physiotherapist is" : "physiotherapists are"} free on{" "}
-                {formatDayShort(query.day)}. Pick a time to book.
-              </p>
-              <ul className="space-y-4">
-                {matches.data.map(({ physio, slots }) => (
-                  <li key={physio.id} className="rounded-3xl bg-white p-5 ring-1 ring-stone-200">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <PhysioPhoto url={physio.photo_url} name={physio.name ?? "Physiotherapist"} size="size-14" />
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={physioProfileHref(physio.id, { service: query.service_id, area: query.area_id, visit })}
-                          className="font-semibold text-stone-900 hover:underline"
-                        >
-                          {physio.name}
-                        </Link>
-                        <p className="text-sm text-stone-600">
-                          {physio.qualification} · {physio.experience_years} years ·{" "}
-                          {physio.fee_pkr ? `${formatPkr(physio.fee_pkr)} per session` : ""}
-                        </p>
-                        <Rating physio={physio} />
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {slots.map((slot) => (
-                        <Link
-                          key={slot}
-                          href={`/book/?${new URLSearchParams({
-                            physio: physio.id,
-                            start: slot,
-                            service: query.service_id,
-                            area: query.area_id,
-                            visit,
-                          })}`}
-                          className="rounded-xl px-3.5 py-2 text-sm font-semibold text-brand-900 tabular-nums ring-1 ring-brand-200 transition hover:bg-brand-50 hover:ring-brand-400"
-                        >
-                          {formatTime(slot)}
-                        </Link>
-                      ))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
       </div>
     </section>
   );

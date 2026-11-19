@@ -171,7 +171,7 @@ async def test_busy_and_opted_out_physios_are_not_alerted(
     listed = (await world.physio.get(f"{API}/provider/open-requests")).json()
     assert listed[0]["id"] == order["id"]
     assert listed[0]["can_pick"] is False
-    assert listed[0]["reason"] == "You aren't free at this time."
+    assert listed[0]["reason"] == "You have another visit or time off then."
     refused = await world.physio.post(f"{API}/provider/open-requests/{order['id']}/pick")
     assert refused.status_code == 409
 
@@ -304,3 +304,13 @@ async def test_report_says_when_whatsapp_is_not_set_up(world: World) -> None:
     refused = await world.admin.post(f"{API}/admin/bookings/{order['id']}/alerts/send")
     assert refused.status_code == 409
     assert "WHATSAPP_ACCESS_TOKEN" in refused.json()["error"]["message"]
+
+
+async def test_requests_outside_weekly_hours_still_alert_and_can_be_picked(
+    world: World, whatsapp: FakeWhatsApp
+) -> None:
+    # The physio works 8 am to 8 pm; a 6 am request is outside those hours.
+    order = await _request(world, start_at=_at(hour=6).isoformat())
+    assert whatsapp.to() == {world.physio_phone}
+    picked = await world.physio.post(f"{API}/provider/open-requests/{order['id']}/pick")
+    assert picked.status_code == 200, picked.text
