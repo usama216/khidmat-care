@@ -20,6 +20,7 @@ class NotificationType(StrEnum):
     SESSION_COMPLETED = "SESSION_COMPLETED"
     FEEDBACK_REQUEST = "FEEDBACK_REQUEST"
     PROVIDER_STATUS_CHANGED = "PROVIDER_STATUS_CHANGED"
+    OPEN_REQUEST = "OPEN_REQUEST"  # A request near a physiotherapist that anyone can pick.
 
 
 class NotificationChannel(StrEnum):
@@ -39,6 +40,8 @@ class Notification(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     __table_args__ = (
         Index("ix_notifications_user_id_read_at", "user_id", "read_at"),
         Index("ix_notifications_status_channel", "status", "channel"),
+        # Finds the alerts sent for one order, so nobody is alerted twice about it.
+        Index("ix_notifications_booking_id", "booking_id"),
     )
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -50,6 +53,7 @@ class Notification(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
     data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    booking_id: Mapped[UUID | None] = mapped_column(ForeignKey("bookings.id"))
     error: Mapped[str | None] = mapped_column(Text)
     sent_at: Mapped[datetime | None]
     read_at: Mapped[datetime | None]

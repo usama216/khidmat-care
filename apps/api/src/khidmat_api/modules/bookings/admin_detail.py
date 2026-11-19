@@ -129,6 +129,9 @@ class StaffBookingDetail(BaseModel):
     assignments: list[AssignmentView]
     complaints: list[BookingComplaint]
     timeline: list[TimelineEntry]
+    # WhatsApp alerts sent to physiotherapists while the order was open.
+    alerts_sent: int = 0
+    alerts_failed: int = 0
 
 
 class _Names:

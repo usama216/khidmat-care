@@ -14,6 +14,7 @@ import {
   Wallet,
   X,
   type LucideIcon,
+  BellRing,
 } from "lucide-react";
 import { adminButton, ErrorState, Skeleton } from "@/components/admin/ui";
 import { LogoMark } from "@/components/ui/Logo";
@@ -25,6 +26,7 @@ import { homeFor } from "./PortalShell";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/physio/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/physio/requests/", label: "Open requests", icon: BellRing },
   { href: "/physio/jobs/", label: "Jobs", icon: Briefcase },
   { href: "/physio/availability/", label: "Calendar", icon: CalendarClock },
   { href: "/physio/balance/", label: "Balance", icon: Wallet },
@@ -76,6 +78,11 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
   const offers = dashboard.data?.new_offers ?? 0;
+  const openRequests = dashboard.data?.open_requests ?? 0;
+  const badges: Record<string, { count: number; label: string }> = {
+    "/physio/jobs/": { count: offers, label: "New offers" },
+    "/physio/requests/": { count: openRequests, label: "Open requests" },
+  };
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -102,10 +109,10 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
             >
               <Icon className="size-4 shrink-0" aria-hidden="true" />
               {label}
-              {href === "/physio/jobs/" && offers > 0 ? (
+              {badges[href]?.count ? (
                 <span className="ms-auto rounded-full bg-brand-700 px-1.5 text-xs font-semibold text-white">
-                  <span className="sr-only">New offers: </span>
-                  {offers}
+                  <span className="sr-only">{badges[href].label}: </span>
+                  {badges[href].count}
                 </span>
               ) : null}
             </Link>
@@ -182,7 +189,7 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
             className={adminButton("secondary", "relative w-9 px-0")}
           >
             <Menu className="size-4" aria-hidden="true" />
-            {offers > 0 ? (
+            {offers + openRequests > 0 ? (
               <span className="absolute -end-1 -top-1 size-2.5 rounded-full bg-brand-600 ring-2 ring-white" />
             ) : null}
           </button>

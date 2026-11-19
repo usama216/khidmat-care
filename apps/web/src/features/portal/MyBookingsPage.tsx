@@ -153,8 +153,8 @@ function BookingCard({ booking }: { booking: BookingView }) {
 
       {booking.status === "PENDING_ASSIGNMENT" ? (
         <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200">
-          Our team is finding a physiotherapist for {formatDateTime(booking.preferred_start_at)}. You can also choose one
-          yourself.
+          Physiotherapists near you have been alerted for {formatDateTime(booking.preferred_start_at)}. The first to pick
+          it is booked, and you&apos;ll see them here. You can also choose one yourself.
           <button type="button" onClick={() => setDialog("choose")} className={adminButton("primary", "mt-2 w-full")}>
             Choose a physio myself
           </button>

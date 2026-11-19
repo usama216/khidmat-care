@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr | None = None
     local_upload_dir: str = ".uploads"
 
+    # WhatsApp Cloud API. Alerts are sent only when both are set; otherwise they're skipped.
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_access_token: SecretStr | None = None
+    whatsapp_api_version: str = "v23.0"
+    # Approved message template for new requests, and its language as approved by Meta.
+    whatsapp_open_request_template: str = "physio_open_request"
+    whatsapp_template_language: str = "en"
+
     @field_validator("cors_origins", "allowed_hosts", mode="before")
     @classmethod
     def _split_commas(cls, value: object) -> object:

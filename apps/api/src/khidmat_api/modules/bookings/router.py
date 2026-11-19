@@ -1,12 +1,13 @@
 """Booking endpoints for patients, physiotherapists and staff."""
 
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints
 
+from khidmat_api.core.config import Settings
 from khidmat_api.core.database import SessionDep
 from khidmat_api.core.enums import Gender
 from khidmat_api.core.errors import NotFoundError
@@ -14,6 +15,14 @@ from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.bookings.admin_detail import StaffBookingDetail, staff_booking_detail
 from khidmat_api.modules.bookings.models import Booking, BookingStatus, SessionStatus, VisitType
+from khidmat_api.modules.bookings.open_requests import (
+    OpenRequest,
+    alert_counts,
+    alert_open_request,
+    alert_open_requests,
+    list_open_requests,
+    pick_open_request,
+)
 from khidmat_api.modules.bookings.provider_dashboard import ProviderDashboard, provider_dashboard
 from khidmat_api.modules.bookings.schedule import expire_holds
 from khidmat_api.modules.bookings.service import (
@@ -45,6 +54,7 @@ from khidmat_api.modules.identity.dependencies import (
     ProviderUserDep,
     SettingsDep,
 )
+from khidmat_api.modules.notifications.whatsapp import WhatsAppDep, WhatsAppSender
 from khidmat_api.modules.providers.service import require_provider_for_user
 
 patient_router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -140,6 +150,45 @@ class OfferResponse(BaseModel):
     reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
 
 
+async def _tidy_holds(session: SessionDep, whatsapp: WhatsAppSender, settings: Settings) -> None:
+    """Release offers nobody answered in time, and alert who could take them instead."""
+    await alert_open_requests(session, await expire_holds(session), whatsapp, settings)
+
+
+class OpenRequestView(BaseModel):
+    id: UUID
+    number: int
+    service_name: str
+    area_name: str
+    visit_type: str
+    preferred_start_at: datetime
+    sessions_count: int
+    condition: str
+    patient_gender: str
+    patient_birth_year: int | None
+    price_total_pkr: int | None
+    can_pick: bool
+    reason: str | None
+
+
+def _open_view(item: OpenRequest) -> OpenRequestView:
+    return OpenRequestView(
+        id=item.booking.id,
+        number=item.booking.number,
+        service_name=item.service_name,
+        area_name=item.area_name,
+        visit_type=item.booking.visit_type.value,
+        preferred_start_at=item.booking.preferred_start_at,
+        sessions_count=item.booking.sessions_count,
+        condition=item.booking.condition,
+        patient_gender=item.patient_gender,
+        patient_birth_year=item.patient_birth_year,
+        price_total_pkr=item.price_total_pkr,
+        can_pick=item.can_pick,
+        reason=item.reason,
+    )
+
+
 async def _load_booking(session: SessionDep, booking_id: UUID) -> Booking:
     booking = await session.get(Booking, booking_id, populate_existing=True)
     if booking is None:
@@ -152,7 +201,12 @@ async def _load_booking(session: SessionDep, booking_id: UUID) -> Booking:
 
 @patient_router.post("", status_code=status.HTTP_201_CREATED, summary="Place an order")
 async def place_order(
-    payload: BookingCreate, user: PatientUserDep, session: SessionDep, storage: StorageDep
+    payload: BookingCreate,
+    user: PatientUserDep,
+    session: SessionDep,
+    storage: StorageDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
 ) -> BookingView:
     booking = await create_booking(
         session,
@@ -172,14 +226,20 @@ async def place_order(
             visit_type=payload.visit_type,
         ),
     )
+    await alert_open_request(session, booking, whatsapp, settings)
     return (await patient_booking_views(session, storage, [booking]))[0]
 
 
 @patient_router.get("", summary="Your orders")
 async def my_bookings(
-    user: PatientUserDep, session: SessionDep, storage: StorageDep, params: PageParamsDep
+    user: PatientUserDep,
+    session: SessionDep,
+    storage: StorageDep,
+    params: PageParamsDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
 ) -> Page[BookingView]:
-    await expire_holds(session)
+    await _tidy_holds(session, whatsapp, settings)
     rows, total = await list_bookings(
         session, booked_by=user.id, offset=params.offset, limit=params.page_size
     )
@@ -251,10 +311,14 @@ async def complain(
 
 
 @provider_router.get("/dashboard", summary="Your numbers and next sessions")
-async def my_dashboard(user: ProviderUserDep, session: SessionDep) -> ProviderDashboard:
+async def my_dashboard(
+    user: ProviderUserDep, session: SessionDep, whatsapp: WhatsAppDep, settings: SettingsDep
+) -> ProviderDashboard:
     provider = await require_provider_for_user(session, user.id)
-    await expire_holds(session)
-    return await provider_dashboard(session, provider)
+    await _tidy_holds(session, whatsapp, settings)
+    dashboard = await provider_dashboard(session, provider)
+    pickable = sum(1 for item in await list_open_requests(session, provider) if item.can_pick)
+    return dashboard.model_copy(update={"open_requests": pickable})
 
 
 @provider_router.get("/jobs", summary="Your offers and jobs")
@@ -262,10 +326,12 @@ async def my_jobs(
     user: ProviderUserDep,
     session: SessionDep,
     params: PageParamsDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
     status: BookingStatus | None = None,
 ) -> Page[BookingView]:
     provider = await require_provider_for_user(session, user.id)
-    await expire_holds(session)
+    await _tidy_holds(session, whatsapp, settings)
     rows, total = await list_bookings(
         session,
         provider_id=provider.id,
@@ -283,13 +349,40 @@ async def my_jobs(
 
 @provider_router.post("/jobs/{booking_id}/respond", summary="Accept or reject an offer")
 async def respond(
-    booking_id: UUID, payload: OfferResponse, user: ProviderUserDep, session: SessionDep
+    booking_id: UUID,
+    payload: OfferResponse,
+    user: ProviderUserDep,
+    session: SessionDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
 ) -> dict[str, str]:
     provider = await require_provider_for_user(session, user.id)
     booking = await respond_to_offer(
         session, booking_id, provider, user, accept=payload.accept, reason=payload.reason
     )
+    # A declined order is open again, so others who fit are alerted.
+    await alert_open_request(session, booking, whatsapp, settings)
     return {"status": booking.status.value}
+
+
+@provider_router.get("/open-requests", summary="Requests near you that anyone can pick")
+async def open_requests(
+    user: ProviderUserDep, session: SessionDep, whatsapp: WhatsAppDep, settings: SettingsDep
+) -> list[OpenRequestView]:
+    provider = await require_provider_for_user(session, user.id)
+    await _tidy_holds(session, whatsapp, settings)
+    return [_open_view(item) for item in await list_open_requests(session, provider)]
+
+
+@provider_router.post(
+    "/open-requests/{booking_id}/pick", summary="Take a request. The first to pick gets it."
+)
+async def pick_request(
+    booking_id: UUID, user: ProviderUserDep, session: SessionDep
+) -> dict[str, str]:
+    provider = await require_provider_for_user(session, user.id)
+    booking = await pick_open_request(session, booking_id, provider, user)
+    return {"status": booking.status.value, "booking_id": str(booking.id)}
 
 
 @provider_router.post(
@@ -354,8 +447,11 @@ async def all_bookings(
     provider_id: UUID | None = None,
     booked_by: UUID | None = None,
     search: Annotated[str | None, Query(max_length=20)] = None,
+    *,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
 ) -> Page[StaffBookingView]:
-    await expire_holds(session)
+    await _tidy_holds(session, whatsapp, settings)
     rows, total = await list_bookings(
         session,
         status=status,
@@ -375,10 +471,17 @@ async def all_bookings(
 
 @admin_router.get("/{booking_id}", summary="One order's full record")
 async def booking_detail(
-    booking_id: UUID, _: BookingManagerDep, session: SessionDep, storage: StorageDep
+    booking_id: UUID,
+    _: BookingManagerDep,
+    session: SessionDep,
+    storage: StorageDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
 ) -> StaffBookingDetail:
-    await expire_holds(session)
-    return await staff_booking_detail(session, storage, await _load_booking(session, booking_id))
+    await _tidy_holds(session, whatsapp, settings)
+    detail = await staff_booking_detail(session, storage, await _load_booking(session, booking_id))
+    sent, failed = await alert_counts(session, booking_id)
+    return detail.model_copy(update={"alerts_sent": sent, "alerts_failed": failed})
 
 
 @admin_router.post("/{booking_id}/assign", summary="Offer an order to a physiotherapist")
@@ -411,6 +514,7 @@ async def update_hold(
     storage: StorageDep,
     request: Request,
     settings: SettingsDep,
+    whatsapp: WhatsAppDep,
 ) -> StaffBookingView:
     booking = await admin_update_hold(
         session,
@@ -420,6 +524,7 @@ async def update_hold(
         actor=actor,
         ip_address=client_ip(request, settings),
     )
+    await alert_open_request(session, booking, whatsapp, settings)
     return (await staff_booking_views(session, storage, [booking]))[0]
 
 

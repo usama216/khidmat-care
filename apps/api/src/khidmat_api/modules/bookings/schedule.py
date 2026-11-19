@@ -271,7 +271,7 @@ async def release_offer(
     )
 
 
-async def expire_holds(session: AsyncSession) -> int:
+async def expire_holds(session: AsyncSession) -> list[Booking]:
     """Release every offer whose reply time has passed. Safe to call on any request.
 
     Nothing else needs to run on a timer: an expired hold already stops blocking the calendar,
@@ -292,4 +292,4 @@ async def expire_holds(session: AsyncSession) -> int:
         await release_offer(session, booking, outcome=AssignmentStatus.EXPIRED, actor_id=None)
     if rows:
         await session.commit()
-    return len(rows)
+    return rows

@@ -224,6 +224,7 @@ const settingsSchema = z.object({
     .max(72, "At most 72 hours."),
   feeMin: z.coerce.number<string>("Enter a number.").int("Enter whole rupees.").min(100, "At least Rs 100."),
   feeMax: z.coerce.number<string>("Enter a number.").int("Enter whole rupees.").max(1_000_000, "This amount is too high."),
+  alerts: z.coerce.number<string>("Enter a number.").int("Enter a whole number.").min(1, "At least 1.").max(100, "At most 100."),
 });
 
 function SettingsForm({ initial }: { initial: PlatformSettings }) {
@@ -235,13 +236,14 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
   const [hold, setHold] = useState(String(initial.hold_hours));
   const [feeMin, setFeeMin] = useState(String(initial.fee_min_pkr));
   const [feeMax, setFeeMax] = useState(String(initial.fee_max_pkr));
+  const [alerts, setAlerts] = useState(String(initial.alert_physios_max));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saved, setSaved] = useState(false);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     setSaved(false);
-    const parsed = settingsSchema.safeParse({ commission, minimum, instructions, hold, feeMin, feeMax });
+    const parsed = settingsSchema.safeParse({ commission, minimum, instructions, hold, feeMin, feeMax, alerts });
     const crossed = parsed.success && parsed.data.feeMin > parsed.data.feeMax;
     if (!parsed.success || commission.trim() === "" || crossed) {
       const fields = (parsed.success ? {} : parsed.error.flatten().fieldErrors) as Record<string, string[] | undefined>;
@@ -252,6 +254,7 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
         hold: fields.hold?.[0],
         feeMin: fields.feeMin?.[0] ?? (crossed ? "The lowest fee can't be more than the highest." : undefined),
         feeMax: fields.feeMax?.[0],
+        alerts: fields.alerts?.[0],
       });
       return;
     }
@@ -264,6 +267,7 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
         hold_hours: parsed.data.hold,
         fee_min_pkr: parsed.data.feeMin,
         fee_max_pkr: parsed.data.feeMax,
+        alert_physios_max: parsed.data.alerts,
       },
       { onSuccess: () => setSaved(true) },
     );
@@ -329,6 +333,21 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
             />
           </FormField>
         </div>
+        <FormField
+          id={`${id}-alerts`}
+          label="WhatsApp alerts per request"
+          hint="When a request needs a physio, at most this many matching physios get a WhatsApp, best rated first. Each message costs money."
+          error={errors.alerts}
+        >
+          <input
+            id={`${id}-alerts`}
+            inputMode="numeric"
+            value={alerts}
+            onChange={(event) => setAlerts(event.target.value)}
+            aria-invalid={Boolean(errors.alerts)}
+            className={adminInput}
+          />
+        </FormField>
         <FormField id={`${id}-instructions`} label="Top-up payment details" hint="Shown to physiotherapists, e.g. your JazzCash, Easypaisa or bank account." error={errors.instructions}>
           <textarea
             id={`${id}-instructions`}

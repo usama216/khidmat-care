@@ -196,6 +196,8 @@ export type StaffBookingDetail = {
     status: string | null;
     note: string | null;
   }[];
+  alerts_sent: number;
+  alerts_failed: number;
 };
 
 export type PatientAccountRow = {
@@ -225,6 +227,8 @@ export type PlatformSettings = {
   hold_hours: number;
   fee_min_pkr: number;
   fee_max_pkr: number;
+  /** At most this many physiotherapists get a WhatsApp alert for one request. */
+  alert_physios_max: number;
 };
 
 export type ReportMonth = {

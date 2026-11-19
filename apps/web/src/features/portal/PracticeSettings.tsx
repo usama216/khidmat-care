@@ -20,6 +20,7 @@ export function PracticeSettings({ profile }: { profile: ProviderProfile }) {
   const [clinic, setClinic] = useState(profile.visit_clinic);
   const [clinicAddress, setClinicAddress] = useState(profile.clinic_address ?? "");
   const [clinicArea, setClinicArea] = useState(profile.clinic_area_id ?? "");
+  const [alerts, setAlerts] = useState(profile.whatsapp_alerts);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saved, setSaved] = useState(false);
 
@@ -41,6 +42,7 @@ export function PracticeSettings({ profile }: { profile: ProviderProfile }) {
         fee_pkr: amount,
         visit_home: home,
         visit_clinic: clinic,
+        whatsapp_alerts: alerts,
         ...(clinic ? { clinic_address: clinicAddress.trim(), clinic_area_id: clinicArea } : {}),
       },
       { onSuccess: () => setSaved(true) },
@@ -51,7 +53,7 @@ export function PracticeSettings({ profile }: { profile: ProviderProfile }) {
     <Card className="p-4 sm:p-5">
       <form onSubmit={onSubmit} onChange={() => setSaved(false)} noValidate className="space-y-4">
         <div>
-          <h2 className="font-semibold text-stone-900">Fee and visits</h2>
+          <h2 className="font-semibold text-stone-900">Fee, visits and alerts</h2>
           <p className="mt-0.5 text-sm text-stone-600">
             Patients see your fee before booking and pay you in cash after each session. A new fee applies to new orders
             only.
@@ -134,10 +136,25 @@ export function PracticeSettings({ profile }: { profile: ProviderProfile }) {
             </FormField>
           </div>
         ) : null}
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg p-3 text-sm ring-1 ring-stone-200">
+          <input
+            type="checkbox"
+            checked={alerts}
+            onChange={(event) => setAlerts(event.target.checked)}
+            className="mt-0.5 size-4 accent-brand-700"
+          />
+          <span>
+            <span className="block font-medium text-stone-900">Send me new requests on WhatsApp</span>
+            <span className="text-stone-600">
+              When a patient near you needs your treatment, we message your registered number. No patient details are
+              sent on WhatsApp.
+            </span>
+          </span>
+        </label>
         <FormError message={save.isError ? errorMessage(save.error) : null} />
         {saved ? <p role="status" className="text-sm font-medium text-brand-800">Saved.</p> : null}
         <button type="submit" disabled={save.isPending} className={adminButton("primary")}>
-          {save.isPending ? "Saving..." : "Save fee and visits"}
+          {save.isPending ? "Saving..." : "Save"}
         </button>
       </form>
     </Card>

@@ -303,8 +303,9 @@ function BookForm({
         <Card className="mt-4 flex gap-3 p-4">
           <UsersRound className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden="true" />
           <p className="text-sm text-stone-700">
-            Our team will choose a verified physiotherapist who treats this problem in your area, and send the request
-            to them. You&apos;ll see their name and fee in your orders as soon as they&apos;re assigned.
+            We alert verified physiotherapists who treat this problem in your area and are free at your time. The first
+            one to pick your request is booked, and you&apos;ll see their name and fee in your orders straight away. If
+            nobody picks it, our team finds someone for you.
           </p>
         </Card>
       )}
@@ -647,11 +648,11 @@ function BookForm({
               <span className="tabular-nums">{formatPkr(total)}</span>
             </p>
           ) : isRequest ? (
-            <p className="text-sm text-stone-700">The fee is confirmed when we assign your physiotherapist, before the first visit.</p>
+            <p className="text-sm text-stone-700">The fee is the chosen physiotherapist&apos;s, shown as soon as one picks your request. You can cancel free if it doesn&apos;t suit you.</p>
           ) : null}
           <p className="mt-2 text-xs text-stone-500">
             {isRequest
-              ? "We'll assign a physiotherapist and they'll confirm. "
+              ? "Nearby physiotherapists are alerted now. "
               : "Your time is held while the physio confirms. "}
             You can cancel up to 2 hours before a session. Phone numbers are shared 2 hours before each session.
           </p>

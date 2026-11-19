@@ -131,6 +131,7 @@ class PracticeUpdate(BaseModel):
         | None
     ) = None
     clinic_area_id: UUID | None = None
+    whatsapp_alerts: bool | None = None
 
 
 class TimeOffCreate(BaseModel):
@@ -169,6 +170,7 @@ class ProviderSelfView(Practice):
     clinic_address: str | None
     fee_min_pkr: int
     fee_max_pkr: int
+    whatsapp_alerts: bool
 
 
 class DocumentCreate(BaseModel):
@@ -313,6 +315,7 @@ async def _self_view(
         rating_avg=provider.rating_avg,
         rating_count=provider.rating_count,
         clinic_address=provider.clinic_address,
+        whatsapp_alerts=provider.whatsapp_alerts,
         fee_min_pkr=platform.fee_min_pkr,
         fee_max_pkr=platform.fee_max_pkr,
         **_practice(provider),

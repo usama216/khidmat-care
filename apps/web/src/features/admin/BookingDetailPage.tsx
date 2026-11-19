@@ -140,8 +140,13 @@ function BookingRecord({ data }: { data: StaffBookingDetail }) {
       {booking.status === "AWAITING_ACCEPTANCE" ? <HoldPanel booking={booking} /> : null}
       {booking.status === "PENDING_ASSIGNMENT" ? (
         <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
-          <strong className="font-semibold">Nobody has this order yet.</strong> Use &quot;Assign a physio&quot; to send it to someone free at{" "}
-          {formatDateTime(booking.preferred_start_at)}, or another time that suits the patient.
+          <strong className="font-semibold">Nobody has this order yet.</strong>{" "}
+          {data.alerts_sent > 0
+            ? `${data.alerts_sent} nearby ${data.alerts_sent === 1 ? "physio was" : "physios were"} alerted on WhatsApp; the first to pick it gets it. `
+            : "No physio was alerted on WhatsApp (nobody matched and was free, or WhatsApp isn't set up). "}
+          {data.alerts_failed > 0 ? `${data.alerts_failed} WhatsApp ${data.alerts_failed === 1 ? "message" : "messages"} failed. ` : ""}
+          You can also use &quot;Assign a physio&quot; for someone free at {formatDateTime(booking.preferred_start_at)}, or
+          another time that suits the patient.
         </p>
       ) : null}
 

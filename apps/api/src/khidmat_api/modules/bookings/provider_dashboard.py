@@ -41,6 +41,8 @@ class UpcomingSession(BaseModel):
 
 class ProviderDashboard(BaseModel):
     status: str
+    # Open requests nearby this physiotherapist can pick right now.
+    open_requests: int = 0
     balance_pkr: int
     minimum_balance_pkr: int
     can_accept_orders: bool

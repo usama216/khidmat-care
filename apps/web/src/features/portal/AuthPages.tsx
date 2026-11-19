@@ -197,6 +197,12 @@ export function PortalRegister() {
         {field("name", "Full name", "text", "name")}
         {field("phone", "Phone number", "tel", "tel", "Stays hidden until 2 hours before a session.")}
         {field("password", "Password", "password", "new-password", "At least 8 characters.")}
+        {role === "PROVIDER" ? (
+          <p className="text-xs text-stone-600">
+            Once approved, we send new requests near you to this number on WhatsApp. You can turn this off in your
+            profile.
+          </p>
+        ) : null}
         <FormError message={register.isError ? errorMessage(register.error) : null} />
         <button type="submit" disabled={register.isPending} className={adminButton("primary", "h-10 w-full")}>
           {register.isPending ? "Creating..." : "Create account"}

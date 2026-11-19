@@ -14,12 +14,15 @@ TOPUP_INSTRUCTIONS_KEY = "wallet.topup_instructions"
 HOLD_HOURS_KEY = "booking.hold_hours"
 FEE_MIN_KEY = "fee.min_pkr"
 FEE_MAX_KEY = "fee.max_pkr"
+ALERT_LIMIT_KEY = "alerts.max_physios"
 
 DEFAULT_MINIMUM_BALANCE_PKR = 700
 # How long a physiotherapist has to reply before the held time is released.
 DEFAULT_HOLD_HOURS = 3
 DEFAULT_FEE_MIN_PKR = 1000
 DEFAULT_FEE_MAX_PKR = 10000
+# Each WhatsApp message costs money, so one request alerts at most this many physiotherapists.
+DEFAULT_ALERT_LIMIT = 20
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,7 @@ class PlatformSettings:
     hold_hours: int
     fee_min_pkr: int
     fee_max_pkr: int
+    alert_physios_max: int
 
 
 async def get_platform_settings(session: AsyncSession) -> PlatformSettings:
@@ -43,6 +47,7 @@ async def get_platform_settings(session: AsyncSession) -> PlatformSettings:
                     HOLD_HOURS_KEY,
                     FEE_MIN_KEY,
                     FEE_MAX_KEY,
+                    ALERT_LIMIT_KEY,
                 )
             )
         )
@@ -55,6 +60,7 @@ async def get_platform_settings(session: AsyncSession) -> PlatformSettings:
         hold_hours=values.get(HOLD_HOURS_KEY, DEFAULT_HOLD_HOURS),
         fee_min_pkr=values.get(FEE_MIN_KEY, DEFAULT_FEE_MIN_PKR),
         fee_max_pkr=values.get(FEE_MAX_KEY, DEFAULT_FEE_MAX_PKR),
+        alert_physios_max=values.get(ALERT_LIMIT_KEY, DEFAULT_ALERT_LIMIT),
     )
 
 

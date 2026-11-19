@@ -131,6 +131,7 @@ export type ProviderProfile = Practice & {
   clinic_address: string | null;
   fee_min_pkr: number;
   fee_max_pkr: number;
+  whatsapp_alerts: boolean;
 };
 
 export type WalletSummary = {
@@ -166,6 +167,8 @@ export type UpcomingSession = {
 
 export type ProviderDashboard = {
   status: ProviderProfile["status"];
+  /** Open requests nearby the physiotherapist can pick right now. */
+  open_requests: number;
   balance_pkr: number;
   minimum_balance_pkr: number;
   can_accept_orders: boolean;
@@ -385,7 +388,7 @@ export function useSubmitApplication() {
   return useProviderMutation(() => apiPost("/provider/submit", { accept_agreement: true }));
 }
 
-export type PracticeValues = Partial<Practice & { clinic_address: string | null }>;
+export type PracticeValues = Partial<Practice & { clinic_address: string | null; whatsapp_alerts: boolean }>;
 
 export function useSavePractice() {
   return useProviderMutation((values: PracticeValues) => apiPatch<ProviderProfile>("/provider/practice", values));
@@ -439,6 +442,36 @@ export function useDeleteTimeOff() {
 
 export function useSaveAvailability() {
   return useProviderMutation((slots: AvailabilitySlot[]) => apiPut("/provider/availability", { slots }));
+}
+
+/** An order nobody has yet. No patient name, address or phone until it's picked. */
+export type OpenRequest = {
+  id: string;
+  number: number;
+  service_name: string;
+  area_name: string;
+  visit_type: VisitType;
+  preferred_start_at: string;
+  sessions_count: number;
+  condition: string;
+  patient_gender: string;
+  patient_birth_year: number | null;
+  price_total_pkr: number | null;
+  can_pick: boolean;
+  reason: string | null;
+};
+
+export function useOpenRequests(enabled: boolean) {
+  return useQuery<OpenRequest[], ApiError>({
+    queryKey: [...KEYS.jobs, "open"],
+    queryFn: () => apiGet<OpenRequest[]>("/provider/open-requests"),
+    enabled,
+    refetchInterval: 30_000, // Taken requests disappear without a reload.
+  });
+}
+
+export function usePickRequest() {
+  return useProviderMutation((id: string) => apiPost<{ status: string }>(`/provider/open-requests/${id}/pick`));
 }
 
 export function useProviderDashboard(enabled: boolean) {

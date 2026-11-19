@@ -134,6 +134,21 @@ function Alerts({ data, profile }: { data: ProviderDashboard; profile: ProviderP
           <ArrowRight className="size-4 shrink-0 rtl:-scale-x-100" aria-hidden="true" />
         </Link>
       ) : null}
+      {data.open_requests > 0 ? (
+        <Link
+          href="/physio/requests/"
+          className="flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-brand-950 ring-1 ring-brand-200 transition hover:bg-brand-100"
+        >
+          <Bell className="size-5 shrink-0 text-brand-700" aria-hidden="true" />
+          <span className="flex-1 text-sm">
+            <strong className="font-semibold">
+              {data.open_requests} open {data.open_requests === 1 ? "request" : "requests"} near you.
+            </strong>{" "}
+            The first physio to pick one gets it.
+          </span>
+          <span className="text-sm font-semibold">See requests</span>
+        </Link>
+      ) : null}
       {data.status === "APPROVED" && !data.can_accept_orders ? (
         <Link
           href="/physio/balance/"

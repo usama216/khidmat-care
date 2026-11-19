@@ -86,6 +86,8 @@ class Provider(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     visit_clinic: Mapped[bool] = mapped_column(default=False, server_default=false())
     clinic_address: Mapped[str | None] = mapped_column(String(500))
     clinic_area_id: Mapped[UUID | None] = mapped_column(ForeignKey("areas.id"), index=True)
+    # New requests nearby are sent on WhatsApp unless the physiotherapist turns this off.
+    whatsapp_alerts: Mapped[bool] = mapped_column(default=True, server_default=true())
 
 
 class ProviderService(Base):

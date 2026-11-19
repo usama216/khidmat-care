@@ -194,6 +194,7 @@ async def test_settings_are_validated_and_saved(admin_client: AsyncClient) -> No
         "hold_hours": 3,
         "fee_min_pkr": 1000,
         "fee_max_pkr": 10000,
+        "alert_physios_max": 20,
     }
 
 

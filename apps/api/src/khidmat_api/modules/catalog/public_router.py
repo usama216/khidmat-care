@@ -13,6 +13,7 @@ from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.audit.service import record_audit
 from khidmat_api.modules.catalog.models import Area, ServicePackage, ServiceType
 from khidmat_api.modules.catalog.settings_service import (
+    ALERT_LIMIT_KEY,
     COMMISSION_KEY,
     FEE_MAX_KEY,
     FEE_MIN_KEY,
@@ -129,6 +130,7 @@ class SettingsResponse(BaseModel):
     hold_hours: int
     fee_min_pkr: int
     fee_max_pkr: int
+    alert_physios_max: int
 
 
 class SettingsUpdate(BaseModel):
@@ -143,6 +145,7 @@ class SettingsUpdate(BaseModel):
     hold_hours: Annotated[int, Field(ge=1, le=72)] | None = None
     fee_min_pkr: Annotated[int, Field(ge=100, le=1_000_000)] | None = None
     fee_max_pkr: Annotated[int, Field(ge=100, le=1_000_000)] | None = None
+    alert_physios_max: Annotated[int, Field(ge=1, le=100)] | None = None
 
 
 @settings_router.get("", summary="Commission, minimum balance and top-up details")
@@ -155,6 +158,7 @@ async def read_settings(_: SettingsManagerDep, session: SessionDep) -> SettingsR
         hold_hours=values.hold_hours,
         fee_min_pkr=values.fee_min_pkr,
         fee_max_pkr=values.fee_max_pkr,
+        alert_physios_max=values.alert_physios_max,
     )
 
 
@@ -179,6 +183,7 @@ async def update_settings(
         "hold_hours": HOLD_HOURS_KEY,
         "fee_min_pkr": FEE_MIN_KEY,
         "fee_max_pkr": FEE_MAX_KEY,
+        "alert_physios_max": ALERT_LIMIT_KEY,
     }
     for field, value in changes.items():
         await set_platform_setting(session, keys[field], value)
