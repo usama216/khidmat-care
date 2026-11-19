@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ApiError, apiGet, apiPost, apiPut } from "@/lib/api";
+import { type ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api";
 
 export type Page<T> = { items: T[]; total: number; page: number; page_size: number };
 export type Gender = "MALE" | "FEMALE";
@@ -16,11 +16,23 @@ export type CatalogService = {
   packages: CatalogPackage[];
 };
 export type CatalogArea = { id: string; name: string; name_urdu: string };
-export type Catalog = { services: CatalogService[]; areas: CatalogArea[] };
+export type Catalog = { services: CatalogService[]; areas: CatalogArea[]; clinic_visits: boolean };
 
 export type AvailabilitySlot = { day_of_week: number; start_minute: number; end_minute: number };
 
-export type Physio = {
+export type VisitType = "HOME" | "CLINIC";
+export type SlotMinutes = 30 | 45 | 60;
+
+/** Fee, session length and where a physiotherapist sees patients. */
+export type Practice = {
+  fee_pkr: number | null;
+  slot_minutes: SlotMinutes;
+  visit_home: boolean;
+  visit_clinic: boolean;
+  clinic_area_id: string | null;
+};
+
+export type Physio = Practice & {
   id: string;
   name: string | null;
   gender: Gender;
@@ -34,6 +46,12 @@ export type Physio = {
   area_ids: string[];
   availability: AvailabilitySlot[];
 };
+
+export type PublicReview = { rating: number; comment: string | null; created_at: string };
+export type PhysioProfile = Physio & { reviews: PublicReview[] };
+export type ScheduleSlot = { start_at: string; available: boolean };
+export type ScheduleDay = { day: string; slots: ScheduleSlot[] };
+export type PhysioMatch = { physio: Physio; slots: string[] };
 
 export type PatientPerson = {
   id: string;
@@ -83,11 +101,15 @@ export type BookingView = {
   sessions: SessionView[];
   created_at: string;
   cancel_reason: string | null;
+  visit_type: VisitType;
+  duration_minutes: number;
+  hold_expires_at: string | null;
+  clinic_address: string | null;
 };
 
 export type DocumentType = "CNIC_FRONT" | "CNIC_BACK" | "DEGREE" | "LICENSE" | "OTHER";
 
-export type ProviderProfile = {
+export type ProviderProfile = Practice & {
   id: string;
   status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
   status_reason: string | null;
@@ -106,6 +128,9 @@ export type ProviderProfile = {
   minimum_balance_pkr: number;
   rating_avg: number;
   rating_count: number;
+  clinic_address: string | null;
+  fee_min_pkr: number;
+  fee_max_pkr: number;
 };
 
 export type WalletSummary = {
@@ -175,13 +200,14 @@ const KEYS = {
   jobs: ["provider", "jobs"] as const,
   wallet: ["provider", "wallet"] as const,
   dashboard: ["provider", "dashboard"] as const,
+  calendar: ["provider", "calendar"] as const,
 };
 
 export function useCatalog() {
   return useQuery<Catalog, ApiError>({ queryKey: KEYS.catalog, queryFn: () => apiGet<Catalog>("/catalog") });
 }
 
-export type PhysioFilters = { service_id?: string; area_id?: string; gender?: string };
+export type PhysioFilters = { service_id?: string; area_id?: string; gender?: string; visit_type?: string };
 
 export function usePhysios(filters: PhysioFilters) {
   return useQuery<Physio[], ApiError>({
@@ -196,6 +222,43 @@ export function usePhysioSlots(physioId: string | undefined, day: string) {
     queryKey: [...KEYS.physios, physioId, "slots", day],
     queryFn: () => apiGet<string[]>(`/physios/${physioId}/slots`, { day }),
     enabled: Boolean(physioId && day),
+  });
+}
+
+export function usePhysioProfile(physioId: string | null | undefined) {
+  return useQuery<PhysioProfile, ApiError>({
+    queryKey: [...KEYS.physios, physioId, "profile"],
+    queryFn: () => apiGet<PhysioProfile>(`/physios/${physioId}`),
+    enabled: Boolean(physioId),
+  });
+}
+
+/** Bookable times for a run of days. Taken times are included, marked unavailable. */
+export function usePhysioSchedule(physioId: string | null | undefined, start: string, days: number) {
+  return useQuery<ScheduleDay[], ApiError>({
+    queryKey: [...KEYS.physios, physioId, "schedule", start, days],
+    queryFn: () => apiGet<ScheduleDay[]>(`/physios/${physioId}/schedule`, { start, days }),
+    enabled: Boolean(physioId && start),
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000, // Times fill up while the page is open.
+  });
+}
+
+export type MatchQuery = {
+  service_id: string;
+  area_id: string;
+  day: string;
+  from_minute: number;
+  to_minute: number;
+  visit_type?: VisitType;
+  gender?: string;
+};
+
+export function useMatchPhysios(query: MatchQuery | null) {
+  return useQuery<PhysioMatch[], ApiError>({
+    queryKey: [...KEYS.physios, "match", query],
+    queryFn: () => apiGet<PhysioMatch[]>("/physios/match", query ?? undefined),
+    enabled: query !== null,
   });
 }
 
@@ -219,11 +282,14 @@ export type NewBooking = {
   patient_id: string;
   service_type_id: string;
   package_id: string;
-  provider_id: string;
-  address_line: string;
+  /** Left out to ask the team to find a physiotherapist. */
+  provider_id?: string;
+  visit_type: VisitType;
+  address_line?: string;
   area_id: string;
   start_at: string;
   condition: string;
+  preferred_gender?: Gender;
 };
 
 function useBookingMutation<TVariables, TResult = unknown>(mutationFn: (variables: TVariables) => Promise<TResult>) {
@@ -317,6 +383,58 @@ export function useAttachDocument() {
 
 export function useSubmitApplication() {
   return useProviderMutation(() => apiPost("/provider/submit", { accept_agreement: true }));
+}
+
+export type PracticeValues = Partial<Practice & { clinic_address: string | null }>;
+
+export function useSavePractice() {
+  return useProviderMutation((values: PracticeValues) => apiPatch<ProviderProfile>("/provider/practice", values));
+}
+
+export type TimeOff = { id: string; start_at: string; end_at: string; reason: string | null };
+export type CalendarEvent = {
+  kind: "SESSION" | "OFFER";
+  booking_id: string;
+  booking_number: number;
+  session_id: string | null;
+  sequence: number | null;
+  sessions_count: number;
+  start_at: string;
+  end_at: string;
+  status: SessionView["status"] | "AWAITING";
+  patient_name: string;
+  service_name: string;
+  area_name: string;
+  visit_type: VisitType;
+  hold_expires_at: string | null;
+};
+export type CalendarView = {
+  start: string;
+  days: number;
+  slot_minutes: SlotMinutes;
+  weekly_hours: AvailabilitySlot[];
+  time_off: TimeOff[];
+  events: CalendarEvent[];
+};
+
+export function useProviderCalendar(start: string, days: number, enabled = true) {
+  return useQuery<CalendarView, ApiError>({
+    queryKey: [...KEYS.calendar, start, days],
+    queryFn: () => apiGet<CalendarView>("/provider/calendar", { start, days }),
+    enabled,
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAddTimeOff() {
+  return useProviderMutation((values: { start_at: string; end_at: string; reason?: string }) =>
+    apiPost<TimeOff>("/provider/time-off", values),
+  );
+}
+
+export function useDeleteTimeOff() {
+  return useProviderMutation((id: string) => apiDelete(`/provider/time-off/${id}`));
 }
 
 export function useSaveAvailability() {

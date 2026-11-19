@@ -85,7 +85,8 @@ class PackageCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     sessions_count: Annotated[int, Field(gt=0, le=100)]
-    price_pkr: Annotated[int, Field(gt=0, le=10_000_000)]
+    # Prices now come from each physiotherapist's fee. Kept for older packages.
+    price_pkr: Annotated[int, Field(ge=0, le=10_000_000)] = 0
 
 
 class PackageUpdate(BaseModel):
@@ -131,6 +132,8 @@ async def create_service(
     except IntegrityError as exc:
         await session.rollback()
         raise ConflictError("A service with this slug already exists.") from exc
+    # Bookable straight away as a single session; longer courses are added as options.
+    session.add(ServicePackage(service_type_id=service.id, sessions_count=1, price_pkr=0))
     record_audit(
         session,
         actor_id=admin.id,

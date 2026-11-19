@@ -53,7 +53,7 @@ export function Hero({ t }: { t: Dictionary }) {
               {h.primary}
               <ArrowRight className="size-5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
             </a>
-            <a href="/find/" className={buttonClasses("secondary", "lg")}>
+            <a href="/physiotherapists/" className={buttonClasses("secondary", "lg")}>
               {h.findPhysio}
               <ArrowDown className="size-5 -rotate-90 rtl:rotate-90" />
             </a>

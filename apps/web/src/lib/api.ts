@@ -32,7 +32,7 @@ export class ApiError extends Error {
 const REQUEST_TIMEOUT_MS = 15_000;
 const API_PREFIX = `${site.apiUrl}/api/v1`;
 
-type Method = "GET" | "POST" | "PATCH" | "PUT";
+type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 async function send(method: Method, path: string, body?: unknown): Promise<Response> {
   try {
@@ -110,4 +110,8 @@ export function apiPatch<TResponse>(path: string, body: unknown): Promise<TRespo
 
 export function apiPut<TResponse>(path: string, body: unknown): Promise<TResponse> {
   return request<TResponse>("PUT", path, body);
+}
+
+export function apiDelete<TResponse = void>(path: string): Promise<TResponse> {
+  return request<TResponse>("DELETE", path);
 }

@@ -26,7 +26,7 @@ import { homeFor } from "./PortalShell";
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/physio/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/physio/jobs/", label: "Jobs", icon: Briefcase },
-  { href: "/physio/availability/", label: "Availability", icon: CalendarClock },
+  { href: "/physio/availability/", label: "Calendar", icon: CalendarClock },
   { href: "/physio/balance/", label: "Balance", icon: Wallet },
   { href: "/physio/profile/", label: "Profile", icon: UserRound },
 ];

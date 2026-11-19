@@ -49,6 +49,7 @@ import {
   type SessionView,
 } from "./api";
 import { minuteLabel } from "./FindPage";
+import { PracticeSettings } from "./PracticeSettings";
 import { BookingStatusBadge, ContactLine, ReasonDialog, SessionStatusBadge } from "./shared";
 
 // The physio layout provides the sidebar and checks the role, so pages only render their content.
@@ -114,7 +115,7 @@ function FileButton({
   );
 }
 
-function ApplicationBanner({ profile }: { profile: ProviderProfile | null | undefined }) {
+export function ApplicationBanner({ profile }: { profile: ProviderProfile | null | undefined }) {
   if (!profile || profile.status === "DRAFT") {
     return (
       <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
@@ -267,8 +268,14 @@ function JobCard({ job }: { job: BookingView }) {
         {age(job.patient.birth_year)}
       </p>
       <p className="mt-1 text-sm text-stone-600">
-        {job.area_name}
-        {job.address_line ? ` · ${job.address_line}` : " · Full address after you accept"}
+        {job.visit_type === "CLINIC" ? (
+          <>Clinic visit{job.clinic_address ? ` · ${job.clinic_address}` : ""}</>
+        ) : (
+          <>
+            Home visit · {job.area_name}
+            {job.address_line ? ` · ${job.address_line}` : " · Full address after you accept"}
+          </>
+        )}
       </p>
       <p className="mt-1 text-sm text-stone-600">
         {job.sessions_count} {job.sessions_count === 1 ? "session" : "sessions"} · {formatPkr(job.price_total_pkr)} cash from
@@ -278,7 +285,15 @@ function JobCard({ job }: { job: BookingView }) {
 
       {offer ? (
         <>
-          <p className="mt-2 text-sm font-medium text-stone-800">Requested: {formatDateTime(job.preferred_start_at)}</p>
+          <p className="mt-2 text-sm font-medium text-stone-800">
+            Requested: {formatDateTime(job.preferred_start_at)} ({job.duration_minutes} minutes)
+          </p>
+          {job.hold_expires_at ? (
+            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-amber-800">
+              <Clock className="size-4" aria-hidden="true" />
+              Reply by {formatDateTime(job.hold_expires_at)}, or the order goes to another physio.
+            </p>
+          ) : null}
           <div className="mt-3">
             <FormError message={respond.isError ? errorMessage(respond.error) : null} />
           </div>
@@ -599,6 +614,11 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
           Verified
         </p>
       ) : null}
+      {profile ? (
+        <div className="mt-4">
+          <PracticeSettings profile={profile} />
+        </div>
+      ) : null}
       <form onSubmit={onSave} noValidate className="mt-4 space-y-4">
         <Card className="space-y-4 p-4">
           <FileButton
@@ -790,32 +810,10 @@ function ChipGroup({
 
 // Availability -------------------------------------------------------------------------------------
 
-export function PhysioAvailabilityPage() {
-  return (
-    <PhysioPage>
-      <AvailabilityContent />
-    </PhysioPage>
-  );
-}
-
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const TIME_OPTIONS = Array.from({ length: 33 }, (_, index) => 360 + index * 30); // 6am to 10pm.
 
-function AvailabilityContent() {
-  const profile = useProviderProfile();
-  if (profile.isPending) return <Skeleton className="h-96 w-full" />;
-  if (!profile.data) {
-    return (
-      <>
-        <PageHeader title="Availability" />
-        <ApplicationBanner profile={null} />
-      </>
-    );
-  }
-  return <AvailabilityForm key={profile.data.id} initial={profile.data.availability} />;
-}
-
-function AvailabilityForm({ initial }: { initial: AvailabilitySlot[] }) {
+export function AvailabilityForm({ initial, embedded = false }: { initial: AvailabilitySlot[]; embedded?: boolean }) {
   const save = useSaveAvailability();
   const [slots, setSlots] = useState(initial);
   const [saved, setSaved] = useState(false);
@@ -837,7 +835,14 @@ function AvailabilityForm({ initial }: { initial: AvailabilitySlot[] }) {
 
   return (
     <>
-      <PageHeader title="Availability" description="Patients can only book you within these hours. Times are Pakistan time." />
+      {embedded ? (
+        <div>
+          <h2 className="font-semibold text-stone-900">Weekly hours</h2>
+          <p className="mt-0.5 text-sm text-stone-600">Patients can only book you within these hours. Times are Pakistan time.</p>
+        </div>
+      ) : (
+        <PageHeader title="Weekly hours" description="Patients can only book you within these hours. Times are Pakistan time." />
+      )}
       <div className="mt-4 space-y-3">
         {DAY_NAMES.map((name, day) => (
           <Card key={name} className="p-3">
@@ -892,9 +897,9 @@ function AvailabilityForm({ initial }: { initial: AvailabilitySlot[] }) {
           </Card>
         ))}
         <FormError message={invalid ?? (save.isError ? errorMessage(save.error) : null)} />
-        {saved ? <p role="status" className="text-sm font-medium text-brand-800">Availability saved.</p> : null}
+        {saved ? <p role="status" className="text-sm font-medium text-brand-800">Weekly hours saved.</p> : null}
         <button type="button" disabled={save.isPending} onClick={onSave} className={adminButton("primary", "w-full")}>
-          Save availability
+          Save weekly hours
         </button>
       </div>
     </>

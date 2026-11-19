@@ -39,6 +39,12 @@ class AssignmentStatus(StrEnum):
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
     WITHDRAWN = "WITHDRAWN"
+    EXPIRED = "EXPIRED"  # The physiotherapist didn't reply before the hold ran out.
+
+
+class VisitType(StrEnum):
+    HOME = "HOME"
+    CLINIC = "CLINIC"
 
 
 class SessionStatus(StrEnum):
@@ -58,7 +64,12 @@ class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("commission_bps BETWEEN 0 AND 10000", name="commission_bps_range"),
         CheckConstraint("lat BETWEEN -90 AND 90", name="lat_range"),
         CheckConstraint("lng BETWEEN -180 AND 180", name="lng_range"),
+        CheckConstraint("duration_minutes > 0", name="duration_positive"),
+        CheckConstraint(
+            "visit_type <> 'HOME' OR address_line IS NOT NULL", name="home_visit_has_address"
+        ),
         Index("ix_bookings_status_created_at", "status", "created_at"),
+        Index("ix_bookings_status_hold_expires_at", "status", "hold_expires_at"),
     )
 
     # Short number for phone and WhatsApp support, e.g. KC-1001. Never used for access control.
@@ -80,7 +91,12 @@ class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     sessions_count: Mapped[int]
     price_total_pkr: Mapped[int]
     commission_bps: Mapped[int]  # Basis points: 2000 = 20%.
-    address_line: Mapped[str] = mapped_column(String(500))
+    # Null for clinic visits: the patient goes to the physiotherapist's clinic.
+    address_line: Mapped[str | None] = mapped_column(String(500))
+    visit_type: Mapped[VisitType] = mapped_column(
+        enum_type(VisitType, "visit_type"), default=VisitType.HOME, server_default="HOME"
+    )
+    duration_minutes: Mapped[int] = mapped_column(default=60, server_default="60")
     area_id: Mapped[UUID] = mapped_column(ForeignKey("areas.id"), index=True)
     lat: Mapped[float | None]
     lng: Mapped[float | None]
@@ -89,6 +105,8 @@ class Booking(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     condition: Mapped[str] = mapped_column(Text)
     cancel_reason: Mapped[str | None] = mapped_column(Text)
     cancelled_at: Mapped[datetime | None]
+    # While an offer waits for a reply, its time is held until this moment.
+    hold_expires_at: Mapped[datetime | None]
 
 
 class BookingAttachment(Base):
@@ -141,6 +159,7 @@ class TreatmentSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     provider_id: Mapped[UUID] = mapped_column(ForeignKey("providers.id"))
     sequence: Mapped[int]
     scheduled_at: Mapped[datetime]
+    duration_minutes: Mapped[int] = mapped_column(default=60, server_default="60")
     status: Mapped[SessionStatus] = mapped_column(
         enum_type(SessionStatus, "status"), default=SessionStatus.SCHEDULED
     )

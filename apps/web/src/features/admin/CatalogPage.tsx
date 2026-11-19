@@ -16,10 +16,8 @@ import {
   PageHeader,
   TableSkeleton,
 } from "@/components/admin/ui";
-import { formatPkr } from "@/lib/format";
 import {
   packageSchema,
-  priceSchema,
   serviceSchema,
   useCreatePackage,
   useCreateService,
@@ -46,8 +44,8 @@ export function CatalogPage() {
   return (
     <>
       <PageHeader
-        title="Services & pricing"
-        description="New prices apply to new bookings. Existing bookings keep the price they were made with."
+        title="Services & session options"
+        description="Each physiotherapist sets their own fee per session. Here you choose the treatments patients can book and how many sessions they can book at once."
         actions={
           <button type="button" onClick={() => setCreating(true)} className={adminButton("primary")}>
             <Plus className="size-4" aria-hidden="true" />
@@ -130,7 +128,7 @@ function ServiceCard({
           </button>
           <button type="button" onClick={onAddPackage} className={adminButton("secondary")}>
             <Plus className="size-4" aria-hidden="true" />
-            Add package
+            Add session option
           </button>
         </div>
       </div>
@@ -140,7 +138,7 @@ function ServiceCard({
         </div>
       ) : null}
       {activePackages.length === 0 ? (
-        <p className="p-4 text-sm text-stone-500">No active packages. Add one to set a price.</p>
+        <p className="p-4 text-sm text-stone-500">No session options. Add one so patients can book this treatment.</p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
           {activePackages.map((pkg) => (
@@ -148,18 +146,13 @@ function ServiceCard({
               <button
                 type="button"
                 onClick={() => onEditPackage(pkg)}
-                aria-label={`Edit ${pkg.sessions_count} session package`}
+                aria-label={`Manage the ${pkg.sessions_count} session option`}
                 className="block w-full rounded-lg p-3 text-start ring-1 ring-stone-200 transition hover:bg-stone-50 hover:ring-stone-300"
               >
-                <p className="text-xs text-stone-500">
+                <p className="font-semibold text-stone-900 tabular-nums">
                   {pkg.sessions_count} {pkg.sessions_count === 1 ? "session" : "sessions"}
                 </p>
-                <p className="mt-0.5 font-semibold text-stone-900 tabular-nums">{formatPkr(pkg.price_pkr)}</p>
-                {pkg.sessions_count > 1 ? (
-                  <p className="text-xs text-stone-500 tabular-nums">
-                    {formatPkr(pkg.price_pkr / pkg.sessions_count)} per session
-                  </p>
-                ) : null}
+                <p className="text-xs text-stone-500">Price: physio&apos;s fee x {pkg.sessions_count}</p>
               </button>
             </li>
           ))}
@@ -241,25 +234,29 @@ function PackageForm({ service, onClose }: { service: Service; onClose: () => vo
   const id = useId();
   const create = useCreatePackage();
   const [sessions, setSessions] = useState("");
-  const [price, setPrice] = useState("");
-  const [errors, setErrors] = useState<Partial<Record<"sessions_count" | "price_pkr", string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<"sessions_count", string>>>({});
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const parsed = packageSchema.safeParse({ sessions_count: sessions, price_pkr: price });
+    const parsed = packageSchema.shape.sessions_count.safeParse(sessions);
     if (!parsed.success) {
-      const fields = parsed.error.flatten().fieldErrors;
-      setErrors({ sessions_count: fields.sessions_count?.[0], price_pkr: fields.price_pkr?.[0] });
+      setErrors({ sessions_count: parsed.error.issues[0]?.message });
       return;
     }
     setErrors({});
-    create.mutate({ serviceId: service.id, ...parsed.data }, { onSuccess: onClose });
+    // The price comes from the physiotherapist's fee, so none is stored here.
+    create.mutate({ serviceId: service.id, sessions_count: parsed.data, price_pkr: 0 }, { onSuccess: onClose });
   };
 
   return (
-    <Modal title={`Add package: ${service.name}`} onClose={onClose}>
+    <Modal title={`Add a session option: ${service.name}`} onClose={onClose}>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <FormField id={`${id}-sessions`} label="Number of sessions" error={errors.sessions_count}>
+        <FormField
+          id={`${id}-sessions`}
+          label="Number of sessions"
+          hint="e.g. 1 for a single visit, 5 or 10 for a course of treatment."
+          error={errors.sessions_count}
+        >
           <input
             id={`${id}-sessions`}
             inputMode="numeric"
@@ -270,54 +267,23 @@ function PackageForm({ service, onClose }: { service: Service; onClose: () => vo
             className={adminInput}
           />
         </FormField>
-        <FormField id={`${id}-price`} label="Total price (PKR)" error={errors.price_pkr}>
-          <input
-            id={`${id}-price`}
-            inputMode="numeric"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            aria-invalid={Boolean(errors.price_pkr)}
-            className={adminInput}
-          />
-        </FormField>
         <FormError message={create.isError ? errorMessage(create.error) : null} />
-        <FormActions pending={create.isPending} submit="Add package" onCancel={onClose} />
+        <FormActions pending={create.isPending} submit="Add option" onCancel={onClose} />
       </form>
     </Modal>
   );
 }
 
 function PriceForm({ pkg, onClose }: { pkg: Package; onClose: () => void }) {
-  const id = useId();
   const update = useUpdatePackage();
-  const [price, setPrice] = useState(String(pkg.price_pkr));
-  const [error, setError] = useState<string>();
-
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    const parsed = priceSchema.safeParse(price);
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message);
-      return;
-    }
-    setError(undefined);
-    update.mutate({ id: pkg.id, price_pkr: parsed.data }, { onSuccess: onClose });
-  };
-
   return (
-    <Modal title={`${pkg.sessions_count} session package`} onClose={onClose}>
-      <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <FormField id={id} label="Total price (PKR)" error={error}>
-          <input
-            id={id}
-            inputMode="numeric"
-            autoFocus
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            aria-invalid={Boolean(error)}
-            className={adminInput}
-          />
-        </FormField>
+    <Modal title={`${pkg.sessions_count} session option`} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-stone-600">
+          Patients can book {pkg.sessions_count} {pkg.sessions_count === 1 ? "session" : "sessions"} at once. The price is
+          the chosen physiotherapist&apos;s fee times {pkg.sessions_count}. Retiring it stops new bookings with this option;
+          orders already placed are not affected.
+        </p>
         <FormError message={update.isError ? errorMessage(update.error) : null} />
         <div className="flex items-center justify-between gap-2">
           <button
@@ -326,11 +292,13 @@ function PriceForm({ pkg, onClose }: { pkg: Package; onClose: () => void }) {
             onClick={() => update.mutate({ id: pkg.id, is_active: false }, { onSuccess: onClose })}
             className={adminButton("ghost", "text-red-700 hover:bg-red-50 hover:text-red-800")}
           >
-            Retire package
+            Retire option
           </button>
-          <FormActions pending={update.isPending} submit="Save price" onCancel={onClose} />
+          <button type="button" onClick={onClose} className={adminButton("secondary")}>
+            Close
+          </button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 }

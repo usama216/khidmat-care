@@ -13,12 +13,14 @@ from khidmat_api.core.errors import NotFoundError
 from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.bookings.admin_detail import StaffBookingDetail, staff_booking_detail
-from khidmat_api.modules.bookings.models import Booking, BookingStatus, SessionStatus
+from khidmat_api.modules.bookings.models import Booking, BookingStatus, SessionStatus, VisitType
 from khidmat_api.modules.bookings.provider_dashboard import ProviderDashboard, provider_dashboard
+from khidmat_api.modules.bookings.schedule import expire_holds
 from khidmat_api.modules.bookings.service import (
     BookingInput,
     admin_assign_provider,
     admin_close_session,
+    admin_update_hold,
     advance_session,
     cancel_booking,
     cancel_session,
@@ -58,10 +60,14 @@ class BookingCreate(BaseModel):
     patient_id: UUID
     service_type_id: UUID
     package_id: UUID
-    provider_id: UUID
-    address_line: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=5, max_length=500)
-    ]
+    # Leave out to ask the team to find a physiotherapist.
+    provider_id: UUID | None = None
+    visit_type: VisitType = VisitType.HOME
+    # Required for home visits.
+    address_line: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=500)]
+        | None
+    ) = None
     area_id: UUID
     lat: Annotated[float, Field(ge=-90, le=90)] | None = None
     lng: Annotated[float, Field(ge=-180, le=180)] | None = None
@@ -120,6 +126,13 @@ class SessionClose(BaseModel):
     reason: Reason
 
 
+class HoldUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["extend", "release"]
+    hours: Annotated[int, Field(ge=1, le=72)] | None = None
+
+
 class OfferResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -156,6 +169,7 @@ async def place_order(
             start_at=payload.start_at.astimezone(UTC),
             condition=payload.condition,
             preferred_gender=payload.preferred_gender,
+            visit_type=payload.visit_type,
         ),
     )
     return (await patient_booking_views(session, storage, [booking]))[0]
@@ -165,6 +179,7 @@ async def place_order(
 async def my_bookings(
     user: PatientUserDep, session: SessionDep, storage: StorageDep, params: PageParamsDep
 ) -> Page[BookingView]:
+    await expire_holds(session)
     rows, total = await list_bookings(
         session, booked_by=user.id, offset=params.offset, limit=params.page_size
     )
@@ -238,6 +253,7 @@ async def complain(
 @provider_router.get("/dashboard", summary="Your numbers and next sessions")
 async def my_dashboard(user: ProviderUserDep, session: SessionDep) -> ProviderDashboard:
     provider = await require_provider_for_user(session, user.id)
+    await expire_holds(session)
     return await provider_dashboard(session, provider)
 
 
@@ -249,6 +265,7 @@ async def my_jobs(
     status: BookingStatus | None = None,
 ) -> Page[BookingView]:
     provider = await require_provider_for_user(session, user.id)
+    await expire_holds(session)
     rows, total = await list_bookings(
         session,
         provider_id=provider.id,
@@ -338,6 +355,7 @@ async def all_bookings(
     booked_by: UUID | None = None,
     search: Annotated[str | None, Query(max_length=20)] = None,
 ) -> Page[StaffBookingView]:
+    await expire_holds(session)
     rows, total = await list_bookings(
         session,
         status=status,
@@ -359,6 +377,7 @@ async def all_bookings(
 async def booking_detail(
     booking_id: UUID, _: BookingManagerDep, session: SessionDep, storage: StorageDep
 ) -> StaffBookingDetail:
+    await expire_holds(session)
     return await staff_booking_detail(session, storage, await _load_booking(session, booking_id))
 
 
@@ -377,6 +396,27 @@ async def assign(
         booking_id,
         payload.provider_id,
         payload.start_at.astimezone(UTC),
+        actor=actor,
+        ip_address=client_ip(request, settings),
+    )
+    return (await staff_booking_views(session, storage, [booking]))[0]
+
+
+@admin_router.post("/{booking_id}/hold", summary="Give more time to reply, or release the time")
+async def update_hold(
+    booking_id: UUID,
+    payload: HoldUpdate,
+    actor: BookingManagerDep,
+    session: SessionDep,
+    storage: StorageDep,
+    request: Request,
+    settings: SettingsDep,
+) -> StaffBookingView:
+    booking = await admin_update_hold(
+        session,
+        booking_id,
+        release=payload.action == "release",
+        hours=payload.hours,
         actor=actor,
         ip_address=client_ip(request, settings),
     )

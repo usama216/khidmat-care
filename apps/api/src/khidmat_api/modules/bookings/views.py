@@ -11,7 +11,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from khidmat_api.core.storage import Storage
-from khidmat_api.modules.bookings.models import Booking, BookingStatus, TreatmentSession
+from khidmat_api.modules.bookings.models import (
+    Booking,
+    BookingStatus,
+    TreatmentSession,
+    VisitType,
+)
 from khidmat_api.modules.bookings.service import (
     CONTACT_AND_LOCK_WINDOW,
     contact_visible,
@@ -74,6 +79,12 @@ class BookingView(BaseModel):
     sessions: list[SessionView]
     created_at: datetime
     cancel_reason: str | None
+    visit_type: str
+    duration_minutes: int
+    # When an offer stops holding its time and goes back to the team.
+    hold_expires_at: datetime | None
+    # Shown once the clinic visit is confirmed.
+    clinic_address: str | None
 
 
 class StaffBookingView(BookingView):
@@ -126,6 +137,20 @@ def _session_view(
     )
 
 
+_CONFIRMED = {BookingStatus.ACTIVE, BookingStatus.COMPLETED}
+
+
+async def _clinic_address(
+    session: AsyncSession, booking: Booking, *, always: bool = False
+) -> str | None:
+    if booking.visit_type != VisitType.CLINIC or booking.provider_id is None:
+        return None
+    if not always and booking.status not in _CONFIRMED:
+        return None
+    provider = await session.get(Provider, booking.provider_id)
+    return provider.clinic_address if provider else None
+
+
 async def _base_fields(session: AsyncSession, booking: Booking) -> dict[str, object]:
     service = await session.get(ServiceType, booking.service_type_id)
     area = await session.get(Area, booking.area_id)
@@ -149,6 +174,11 @@ async def _base_fields(session: AsyncSession, booking: Booking) -> dict[str, obj
         ),
         "created_at": booking.created_at,
         "cancel_reason": booking.cancel_reason,
+        "visit_type": booking.visit_type.value,
+        "duration_minutes": booking.duration_minutes,
+        "hold_expires_at": booking.hold_expires_at
+        if booking.status == BookingStatus.AWAITING_ACCEPTANCE
+        else None,
     }
 
 
@@ -166,6 +196,7 @@ async def patient_booking_views(
             BookingView(
                 **await _base_fields(session, booking),
                 address_line=booking.address_line,
+                clinic_address=await _clinic_address(session, booking),
                 provider=summary,
                 sessions=[_session_view(row, phone, reviews) for row in rows],
             )
@@ -190,6 +221,7 @@ async def provider_job_views(session: AsyncSession, bookings: list[Booking]) -> 
                 **await _base_fields(session, booking),
                 # The exact address is shared only once the physiotherapist has accepted.
                 address_line=booking.address_line if accepted else None,
+                clinic_address=await _clinic_address(session, booking, always=True),
                 provider=None,
                 sessions=[_session_view(row, phone, reviews) for row in rows],
             )
@@ -212,6 +244,7 @@ async def staff_booking_views(
             StaffBookingView(
                 **await _base_fields(session, booking),
                 address_line=booking.address_line,
+                clinic_address=await _clinic_address(session, booking, always=True),
                 provider=summary,
                 sessions=sessions,
                 commission_bps=booking.commission_bps,

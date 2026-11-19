@@ -11,13 +11,13 @@ import { cn } from "@/lib/cn";
 
 const NAV: Record<string, { href: string; label: string }[]> = {
   PATIENT: [
-    { href: "/find/", label: "Find a physio" },
+    { href: "/physiotherapists/", label: "Find a physio" },
     { href: "/my/bookings/", label: "My orders" },
   ],
   PROVIDER: [
     { href: "/physio/", label: "Dashboard" },
     { href: "/physio/jobs/", label: "Jobs" },
-    { href: "/physio/availability/", label: "Availability" },
+    { href: "/physio/availability/", label: "Calendar" },
     { href: "/physio/balance/", label: "Balance" },
     { href: "/physio/profile/", label: "Profile" },
   ],
@@ -34,7 +34,7 @@ export function PortalHeader() {
   const me = useCurrentUser();
   const logout = useLogout();
   const user = me.data;
-  const links = user ? (NAV[user.role] ?? []) : [{ href: "/find/", label: "Find a physio" }];
+  const links = user ? (NAV[user.role] ?? []) : [{ href: "/physiotherapists/", label: "Find a physio" }];
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-white">

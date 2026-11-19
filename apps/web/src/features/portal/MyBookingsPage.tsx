@@ -2,7 +2,8 @@
 
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Building2, CircleCheck, Home, Star } from "lucide-react";
 import {
   adminButton,
   adminInput,
@@ -45,18 +46,28 @@ export function MyBookingsPage() {
 function BookingList() {
   const [page, setPage] = useState(1);
   const bookings = useMyBookings(page);
+  const placed = useSearchParams().get("placed");
 
   return (
     <>
       <PageHeader
         title="My orders"
         actions={
-          <Link href="/find/" className={adminButton("primary")}>
+          <Link href="/physiotherapists/" className={adminButton("primary")}>
             Book a physio
           </Link>
         }
       />
       <div className="mt-4 space-y-3">
+        {placed ? (
+          <div role="status" className="flex gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-950 ring-1 ring-brand-200">
+            <CircleCheck className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden="true" />
+            <p>
+              <strong className="font-semibold">Order KC-{placed} is placed.</strong> We&apos;ll keep you posted here. The
+              physiotherapist confirms, then the visit shows as Confirmed.
+            </p>
+          </div>
+        ) : null}
         {bookings.isPending ? (
           <Card>
             <TableSkeleton rows={3} />
@@ -103,15 +114,31 @@ function BookingCard({ booking }: { booking: BookingView }) {
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium text-stone-500">Order KC-{booking.number}</p>
-        <BookingStatusBadge status={booking.status} />
+        <BookingStatusBadge status={booking.status} patient />
       </div>
       <h2 className="mt-1 font-semibold text-stone-900">{booking.service_name}</h2>
       <p className="text-sm text-stone-600">
         For {booking.patient.name} · {booking.sessions_count} {booking.sessions_count === 1 ? "session" : "sessions"} ·{" "}
-        {formatPkr(booking.price_total_pkr)} cash
+        {booking.price_total_pkr > 0 ? `${formatPkr(booking.price_total_pkr)} cash` : "fee confirmed when a physio is assigned"}
       </p>
+      <p className="mt-1 flex items-center gap-1.5 text-sm text-stone-600">
+        {booking.visit_type === "CLINIC" ? (
+          <Building2 className="size-4 text-stone-400" aria-hidden="true" />
+        ) : (
+          <Home className="size-4 text-stone-400" aria-hidden="true" />
+        )}
+        {booking.visit_type === "CLINIC" ? "Clinic visit" : `Home visit in ${booking.area_name}`}
+      </p>
+      {booking.clinic_address ? (
+        <p className="mt-1 text-sm text-stone-800">
+          <span className="font-medium">Clinic address: </span>
+          {booking.clinic_address}
+        </p>
+      ) : null}
       {booking.status === "AWAITING_ACCEPTANCE" ? (
-        <p className="mt-1 text-sm text-stone-600">Requested time: {formatDateTime(booking.preferred_start_at)}</p>
+        <p className="mt-1 text-sm text-stone-600">
+          Requested time: {formatDateTime(booking.preferred_start_at)}. Held for you while the physio confirms.
+        </p>
       ) : null}
 
       {booking.provider ? (
@@ -126,9 +153,10 @@ function BookingCard({ booking }: { booking: BookingView }) {
 
       {booking.status === "PENDING_ASSIGNMENT" ? (
         <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200">
-          The physio couldn&apos;t take this order. Please choose another.
+          Our team is finding a physiotherapist for {formatDateTime(booking.preferred_start_at)}. You can also choose one
+          yourself.
           <button type="button" onClick={() => setDialog("choose")} className={adminButton("primary", "mt-2 w-full")}>
-            Choose another physio
+            Choose a physio myself
           </button>
         </div>
       ) : null}

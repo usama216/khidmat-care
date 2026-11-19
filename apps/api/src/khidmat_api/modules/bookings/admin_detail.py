@@ -35,6 +35,7 @@ TimelineType = Literal[
     "ACCEPTED",
     "REJECTED",
     "WITHDRAWN",
+    "EXPIRED",
     "SESSION",
     "RATED",
     "COMPLAINT_RAISED",
@@ -49,6 +50,7 @@ _TIMELINE_ORDER: dict[TimelineType, int] = {
     "ACCEPTED": 2,
     "REJECTED": 2,
     "WITHDRAWN": 2,
+    "EXPIRED": 2,
     "SESSION": 3,
     "RATED": 4,
     "COMPLAINT_RAISED": 5,
@@ -60,6 +62,7 @@ _RESPONSE_TYPES: dict[str, TimelineType] = {
     AssignmentStatus.ACCEPTED: "ACCEPTED",
     AssignmentStatus.REJECTED: "REJECTED",
     AssignmentStatus.WITHDRAWN: "WITHDRAWN",
+    AssignmentStatus.EXPIRED: "EXPIRED",
 }
 
 
@@ -269,7 +272,7 @@ async def staff_booking_detail(
                 TimelineEntry(
                     at=assignment.responded_at,
                     type=response,
-                    actor_name=assignment.provider_name,
+                    actor_name=None if response == "EXPIRED" else assignment.provider_name,
                     note=assignment.reject_reason,
                 )
             )

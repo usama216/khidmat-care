@@ -32,6 +32,8 @@ export type ContactMessage = {
   status: MessageStatus;
   created_at: string;
   handled_at: string | null;
+  reply_note: string | null;
+  handled_by_name: string | null;
 };
 
 export type Package = { id: string; sessions_count: number; price_pkr: number; is_active: boolean };
@@ -143,8 +145,8 @@ export function useMessages(filters: MessageFilters) {
 
 export function useUpdateMessage() {
   const queryClient = useQueryClient();
-  return useMutation<ContactMessage, ApiError, { id: string; status: MessageStatus }>({
-    mutationFn: ({ id, status }) => apiPatch<ContactMessage>(`/admin/contact-messages/${id}`, { status }),
+  return useMutation<ContactMessage, ApiError, { id: string; status: MessageStatus; reply_note?: string | null }>({
+    mutationFn: ({ id, ...body }) => apiPatch<ContactMessage>(`/admin/contact-messages/${id}`, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: KEYS.messages });
       void queryClient.invalidateQueries({ queryKey: KEYS.overview });

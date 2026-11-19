@@ -96,15 +96,27 @@ export function PhysioDashboardPage() {
       </div>
 
       {!approved ? <Onboarding profile={profile.data} /> : null}
-      {dashboard.data ? <Alerts data={dashboard.data} /> : null}
+      {dashboard.data ? <Alerts data={dashboard.data} profile={profile.data} /> : null}
       {profile.data ? <Numbers query={dashboard} /> : null}
     </>
   );
 }
 
-function Alerts({ data }: { data: ProviderDashboard }) {
+function Alerts({ data, profile }: { data: ProviderDashboard; profile: ProviderProfile | null | undefined }) {
   return (
     <div className="mt-5 space-y-3 empty:hidden">
+      {profile && !profile.fee_pkr ? (
+        <Link
+          href="/physio/profile/"
+          className="flex items-center gap-3 rounded-xl bg-amber-50 p-4 text-amber-950 ring-1 ring-amber-200 transition hover:bg-amber-100"
+        >
+          <CircleAlert className="size-5 shrink-0" aria-hidden="true" />
+          <span className="flex-1 text-sm">
+            <strong className="font-semibold">Patients can&apos;t book you yet.</strong> Set your fee per session first.
+          </span>
+          <span className="text-sm font-semibold">Set fee</span>
+        </Link>
+      ) : null}
       {data.new_offers > 0 ? (
         <Link
           href="/physio/jobs/"
@@ -240,7 +252,7 @@ function Numbers({ query }: { query: ReturnType<typeof useProviderDashboard> }) 
             <div className="mt-3 grid gap-2">
               <Link href="/physio/availability/" className={adminButton("secondary", "justify-start")}>
                 <Clock className="size-4" aria-hidden="true" />
-                Update working hours
+                Calendar and time off
               </Link>
               <Link href="/physio/balance/" className={adminButton("secondary", "justify-start")}>
                 <CircleDollarSign className="size-4" aria-hidden="true" />
@@ -316,6 +328,7 @@ function Onboarding({ profile }: { profile: ProviderProfile | null | undefined }
       href: "/physio/profile/",
     },
     { label: "Set your working hours", done: Boolean(profile?.availability.length), href: "/physio/availability/" },
+    { label: "Set your fee", done: Boolean(profile?.fee_pkr), href: "/physio/profile/" },
     { label: "Submit for review", done: submitted, href: "/physio/profile/" },
     { label: "Verification and a short meeting with our team", done: profile?.status === "APPROVED", href: null },
   ];

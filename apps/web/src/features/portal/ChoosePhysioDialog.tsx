@@ -11,7 +11,8 @@ function todayInKarachi() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
 }
 
-// After a physiotherapist declines, the patient or staff pick someone else for the same order.
+// When nobody has the order yet, the patient or staff pick a physiotherapist and a free time.
+// The order's price follows the chosen physiotherapist's fee.
 export function ChoosePhysioDialog({
   booking,
   staff = false,
@@ -22,7 +23,8 @@ export function ChoosePhysioDialog({
   onClose: () => void;
 }) {
   const id = useId();
-  const physios = usePhysios({});
+  // Only physiotherapists who can do this kind of visit, with a fee set and enough balance.
+  const physios = usePhysios({ visit_type: booking.visit_type });
   const patientChoice = useChooseProvider();
   const staffChoice = useAssignProvider();
   const choose = staff ? staffChoice : patientChoice;
@@ -31,6 +33,7 @@ export function ChoosePhysioDialog({
   const [slot, setSlot] = useState("");
   const [invalid, setInvalid] = useState<string>();
   const slots = usePhysioSlots(physioId || undefined, day);
+  const chosen = physios.data?.find((physio) => physio.id === physioId);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -43,7 +46,7 @@ export function ChoosePhysioDialog({
   };
 
   return (
-    <Modal title="Choose another physiotherapist" onClose={onClose}>
+    <Modal title={staff ? "Assign a physiotherapist" : "Choose a physiotherapist"} onClose={onClose}>
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <FormField id={`${id}-physio`} label="Physiotherapist">
           <select
@@ -58,7 +61,8 @@ export function ChoosePhysioDialog({
             <option value="">Choose</option>
             {physios.data?.map((physio) => (
               <option key={physio.id} value={physio.id}>
-                {physio.name} ({physio.qualification}, {physio.experience_years} years)
+                {physio.name} ({physio.qualification}, {physio.experience_years} years
+                {physio.fee_pkr ? `, Rs ${physio.fee_pkr.toLocaleString("en-PK")} a session` : ""})
               </option>
             ))}
           </select>
@@ -91,6 +95,12 @@ export function ChoosePhysioDialog({
               </select>
             )}
           </FormField>
+        ) : null}
+        {chosen?.fee_pkr ? (
+          <p className="text-sm text-stone-700">
+            New total: <strong className="tabular-nums">Rs {(chosen.fee_pkr * booking.sessions_count).toLocaleString("en-PK")}</strong>{" "}
+            for {booking.sessions_count} {booking.sessions_count === 1 ? "session" : "sessions"}.
+          </p>
         ) : null}
         <FormError message={invalid ?? (choose.isError ? errorMessage(choose.error) : null)} />
         <button type="submit" disabled={choose.isPending} className={adminButton("primary", "w-full")}>

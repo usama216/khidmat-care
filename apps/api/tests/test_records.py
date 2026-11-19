@@ -182,4 +182,5 @@ async def test_public_physio_terms_follow_the_dashboard(world: World) -> None:
         f"{API}/admin/settings", json={"commission_bps": 1500, "minimum_balance_pkr": 900}
     )
     terms = (await world.patient.get(f"{API}/catalog/physio-terms")).json()
-    assert terms == {"commission_bps": 1500, "minimum_balance_pkr": 900}
+    assert terms["commission_bps"] == 1500
+    assert terms["minimum_balance_pkr"] == 900

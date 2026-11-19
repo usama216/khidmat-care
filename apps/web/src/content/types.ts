@@ -46,6 +46,7 @@ export type Dictionary = {
     switchLang: Locale;
     skip: string;
     home: string;
+    find: string;
   };
   hero: {
     eyebrow: string;

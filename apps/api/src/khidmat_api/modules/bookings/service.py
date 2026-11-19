@@ -20,6 +20,14 @@ from khidmat_api.modules.bookings.models import (
     SessionEvent,
     SessionStatus,
     TreatmentSession,
+    VisitType,
+)
+from khidmat_api.modules.bookings.schedule import (
+    BOOKING_LEAD,
+    OPEN_SESSION_STATUSES,
+    hold_deadline,
+    release_offer,
+    require_free_slot,
 )
 from khidmat_api.modules.catalog.models import Area, ServicePackage, ServiceType
 from khidmat_api.modules.catalog.settings_service import (
@@ -30,22 +38,22 @@ from khidmat_api.modules.identity.models import User
 from khidmat_api.modules.patients.models import Patient
 from khidmat_api.modules.payments.models import Payment
 from khidmat_api.modules.providers.models import Provider, ProviderStatus
-from khidmat_api.modules.providers.service import (
-    SESSION_MINUTES,
-    get_availability,
-    get_provider_lists,
-    is_within_availability,
-)
+from khidmat_api.modules.providers.service import get_provider_lists
 from khidmat_api.modules.wallet.service import charge_commission
 
 # Numbers are exchanged from this point before a session, and cancelling stops.
 CONTACT_AND_LOCK_WINDOW = timedelta(hours=2)
-_OPEN_SESSION_STATUSES = (SessionStatus.SCHEDULED, SessionStatus.ON_THE_WAY, SessionStatus.ARRIVED)
+_OPEN_SESSION_STATUSES = OPEN_SESSION_STATUSES
 _NEXT_STATUS = {
     SessionStatus.SCHEDULED: SessionStatus.ON_THE_WAY,
     SessionStatus.ON_THE_WAY: SessionStatus.ARRIVED,
     SessionStatus.ARRIVED: SessionStatus.COMPLETED,
 }
+
+
+class OfferExpiredError(ConflictError):
+    code = "offer_expired"
+    message = "The reply time for this offer has passed, so it went back to our team."
 
 
 class CancelLockedError(ConflictError):
@@ -88,42 +96,44 @@ async def _require_bookable_provider(
     service_type_id: UUID,
     area_id: UUID,
     start_at: datetime,
+    visit_type: VisitType,
+    *,
+    ignore_booking: UUID | None = None,
 ) -> Provider:
     provider = await session.get(Provider, provider_id)
     if provider is None or provider.status != ProviderStatus.APPROVED:
         raise ConflictError("This physiotherapist isn't available.")
     minimum = (await get_platform_settings(session)).minimum_balance_pkr
-    if provider.balance_pkr < minimum:
+    if provider.balance_pkr < minimum or provider.fee_pkr is None:
         raise ConflictError("This physiotherapist isn't available right now.")
     services, areas = await get_provider_lists(session, provider_id)
     if service_type_id not in services:
         raise ConflictError("This physiotherapist doesn't offer this treatment.")
-    if area_id not in areas:
-        raise ConflictError("This physiotherapist doesn't cover this area.")
-    await _require_free_slot(session, provider, start_at)
+    if visit_type == VisitType.HOME:
+        if not provider.visit_home:
+            raise ConflictError("This physiotherapist only sees patients at their clinic.")
+        if area_id not in areas:
+            raise ConflictError("This physiotherapist doesn't cover this area.")
+    elif not provider.visit_clinic:
+        raise ConflictError("This physiotherapist only does home visits.")
+    await require_free_slot(
+        session, provider, start_at, provider.slot_minutes, ignore_booking=ignore_booking
+    )
     return provider
 
 
-async def _require_free_slot(
-    session: AsyncSession,
-    provider: Provider,
-    start_at: datetime,
-    *,
-    ignore_session: UUID | None = None,
-) -> None:
-    if not is_within_availability(await get_availability(session, provider.id), start_at):
-        raise ConflictError("The physiotherapist isn't available at this time.")
-    window = timedelta(minutes=SESSION_MINUTES)
-    query = select(TreatmentSession.id).where(
-        TreatmentSession.provider_id == provider.id,
-        TreatmentSession.status.in_(_OPEN_SESSION_STATUSES),
-        TreatmentSession.scheduled_at > start_at - window,
-        TreatmentSession.scheduled_at < start_at + window,
-    )
-    if ignore_session is not None:
-        query = query.where(TreatmentSession.id != ignore_session)
-    if await session.scalar(query.limit(1)) is not None:
-        raise ConflictError("This time was just taken. Please choose another.")
+def _price_from(provider: Provider, booking: Booking) -> None:
+    """The chosen physiotherapist's fee and session length apply to the order."""
+    assert provider.fee_pkr is not None  # noqa: S101  # Checked by _require_bookable_provider.
+    booking.price_total_pkr = provider.fee_pkr * booking.sessions_count
+    booking.duration_minutes = provider.slot_minutes
+    if booking.visit_type == VisitType.CLINIC and provider.clinic_area_id is not None:
+        booking.area_id = provider.clinic_area_id
+
+
+def _require_bookable_time(start_at: datetime) -> None:
+    if start_at <= datetime.now(UTC) + BOOKING_LEAD:
+        raise ConflictError("Choose a time at least 30 minutes from now.")
 
 
 @dataclass(frozen=True)
@@ -131,19 +141,20 @@ class BookingInput:
     patient_id: UUID
     service_type_id: UUID
     package_id: UUID
-    provider_id: UUID
-    address_line: str
+    # None asks the team to find someone: the order waits in "Needs physio".
+    provider_id: UUID | None
+    address_line: str | None
     area_id: UUID
     lat: float | None
     lng: float | None
     start_at: datetime
     condition: str
     preferred_gender: Gender | None
+    visit_type: VisitType = VisitType.HOME
 
 
 async def create_booking(session: AsyncSession, user: User, data: BookingInput) -> Booking:
-    if data.start_at <= datetime.now(UTC) + timedelta(minutes=30):
-        raise ConflictError("Choose a time at least 30 minutes from now.")
+    _require_bookable_time(data.start_at)
     patient = await session.get(Patient, data.patient_id)
     if patient is None or patient.owner_id != user.id:
         raise NotFoundError("This patient was not found.")
@@ -154,10 +165,12 @@ async def create_booking(session: AsyncSession, user: User, data: BookingInput) 
     area = await session.get(Area, data.area_id)
     if service is None or not service.is_active or area is None or not area.is_active:
         raise ConflictError("This service or area isn't available.")
+    if data.visit_type == VisitType.HOME and not data.address_line:
+        raise ConflictError("Enter the address for the home visit.")
+    if data.provider_id is None and data.visit_type == VisitType.CLINIC:
+        raise ConflictError("Choose a physiotherapist for a clinic visit.")
+    platform = await get_platform_settings(session)
     commission = await require_commission_bps(session)
-    await _require_bookable_provider(
-        session, data.provider_id, data.service_type_id, data.area_id, data.start_at
-    )
 
     booking = Booking(
         patient_id=patient.id,
@@ -167,27 +180,44 @@ async def create_booking(session: AsyncSession, user: User, data: BookingInput) 
         provider_id=data.provider_id,
         preferred_provider_id=data.provider_id,
         preferred_gender=data.preferred_gender,
-        status=BookingStatus.AWAITING_ACCEPTANCE,
+        status=BookingStatus.PENDING_ASSIGNMENT,
         sessions_count=package.sessions_count,
-        price_total_pkr=package.price_pkr,
+        # Set from the physiotherapist's fee once one is chosen.
+        price_total_pkr=0,
         commission_bps=commission,
-        address_line=data.address_line,
+        visit_type=data.visit_type,
+        address_line=data.address_line if data.visit_type == VisitType.HOME else None,
         area_id=data.area_id,
         lat=data.lat,
         lng=data.lng,
         preferred_start_at=data.start_at,
         condition=data.condition,
     )
+    if data.provider_id is not None:
+        provider = await _require_bookable_provider(
+            session,
+            data.provider_id,
+            data.service_type_id,
+            data.area_id,
+            data.start_at,
+            data.visit_type,
+        )
+        _price_from(provider, booking)
+        booking.status = BookingStatus.AWAITING_ACCEPTANCE
+        booking.hold_expires_at = hold_deadline(
+            datetime.now(UTC), data.start_at, platform.hold_hours
+        )
     session.add(booking)
     await session.flush()
-    session.add(
-        BookingAssignment(
-            booking_id=booking.id,
-            provider_id=data.provider_id,
-            assigned_by_id=user.id,
-            status=AssignmentStatus.OFFERED,
+    if data.provider_id is not None:
+        session.add(
+            BookingAssignment(
+                booking_id=booking.id,
+                provider_id=data.provider_id,
+                assigned_by_id=user.id,
+                status=AssignmentStatus.OFFERED,
+            )
         )
-    )
     await session.commit()
     await session.refresh(booking)
     return booking
@@ -213,6 +243,7 @@ async def _add_session(
         provider_id=provider_id,
         sequence=(last or 0) + 1,
         scheduled_at=start_at,
+        duration_minutes=booking.duration_minutes,
         status=SessionStatus.SCHEDULED,
     )
     session.add(row)
@@ -245,7 +276,13 @@ async def respond_to_offer(
         or assignment.status != AssignmentStatus.OFFERED
     ):
         raise ConflictError("This offer is no longer open.")
-    assignment.responded_at = datetime.now(UTC)
+    now = datetime.now(UTC)
+    if booking.hold_expires_at is not None and booking.hold_expires_at <= now:
+        await release_offer(session, booking, outcome=AssignmentStatus.EXPIRED, actor_id=None)
+        await session.commit()
+        raise OfferExpiredError
+    assignment.responded_at = now
+    booking.hold_expires_at = None
 
     if accept:
         minimum = (await get_platform_settings(session)).minimum_balance_pkr
@@ -255,7 +292,13 @@ async def respond_to_offer(
             )
         if provider.status != ProviderStatus.APPROVED:
             raise ForbiddenError("Your account isn't approved.")
-        await _require_free_slot(session, provider, booking.preferred_start_at)
+        await require_free_slot(
+            session,
+            provider,
+            booking.preferred_start_at,
+            booking.duration_minutes,
+            ignore_booking=booking.id,
+        )
         assignment.status = AssignmentStatus.ACCEPTED
         booking.status = BookingStatus.ACTIVE
         await _add_session(session, booking, provider.id, booking.preferred_start_at, user.id)
@@ -290,14 +333,22 @@ async def _offer(
     *,
     assigned_by: UUID,
 ) -> Booking:
-    if start_at <= datetime.now(UTC) + timedelta(minutes=30):
-        raise ConflictError("Choose a time at least 30 minutes from now.")
-    await _require_bookable_provider(
-        session, provider_id, booking.service_type_id, booking.area_id, start_at
+    _require_bookable_time(start_at)
+    provider = await _require_bookable_provider(
+        session,
+        provider_id,
+        booking.service_type_id,
+        booking.area_id,
+        start_at,
+        booking.visit_type,
+        ignore_booking=booking.id,
     )
+    _price_from(provider, booking)
     booking.provider_id = provider_id
     booking.preferred_start_at = start_at
     booking.status = BookingStatus.AWAITING_ACCEPTANCE
+    hours = (await get_platform_settings(session)).hold_hours
+    booking.hold_expires_at = hold_deadline(datetime.now(UTC), start_at, hours)
     session.add(
         BookingAssignment(
             booking_id=booking.id,
@@ -341,14 +392,56 @@ async def admin_assign_provider(
     return await _offer(session, booking, provider_id, start_at, assigned_by=actor.id)
 
 
+async def admin_update_hold(
+    session: AsyncSession,
+    booking_id: UUID,
+    *,
+    release: bool,
+    hours: int | None,
+    actor: User,
+    ip_address: str,
+) -> Booking:
+    """Give a physiotherapist more time to reply, or release the time now."""
+    booking = await session.get(Booking, booking_id, with_for_update=True)
+    if booking is None:
+        raise NotFoundError("This booking was not found.")
+    if booking.status != BookingStatus.AWAITING_ACCEPTANCE:
+        raise ConflictError("Only orders waiting for a reply have a hold.")
+    if release:
+        await release_offer(
+            session,
+            booking,
+            outcome=AssignmentStatus.WITHDRAWN,
+            actor_id=actor.id,
+            ip_address=ip_address,
+        )
+    else:
+        if hours is None:
+            raise ConflictError("Choose how many hours to add.")
+        now = datetime.now(UTC)
+        if booking.preferred_start_at <= now:
+            raise ConflictError("This visit time has passed. Release it and choose a new time.")
+        booking.hold_expires_at = min(now + timedelta(hours=hours), booking.preferred_start_at)
+        record_audit(
+            session,
+            actor_id=actor.id,
+            action="booking.hold_extended",
+            entity_type="booking",
+            entity_id=str(booking.id),
+            metadata={"hours": hours},
+            ip_address=ip_address,
+        )
+    await session.commit()
+    return booking
+
+
 async def schedule_next_session(
     session: AsyncSession, booking_id: UUID, provider: Provider, user: User, start_at: datetime
 ) -> TreatmentSession:
     booking = await _provider_booking(session, booking_id, provider)
     if booking.status != BookingStatus.ACTIVE:
         raise ConflictError("This booking isn't active.")
-    if start_at <= datetime.now(UTC):
-        raise ConflictError("Choose a future time.")
+    _require_bookable_time(start_at)
     used = await session.scalar(
         select(func.count())
         .select_from(TreatmentSession)
@@ -359,7 +452,7 @@ async def schedule_next_session(
     )
     if (used or 0) >= booking.sessions_count:
         raise ConflictError("All sessions in this package are already scheduled.")
-    await _require_free_slot(session, provider, start_at)
+    await require_free_slot(session, provider, start_at, booking.duration_minutes)
     row = await _add_session(session, booking, provider.id, start_at, user.id)
     await session.commit()
     return row
@@ -498,8 +591,10 @@ async def cancel_booking(
     for row in rows:
         await _cancel_session_row(session, row, user.id, reason)
     assignment = await _open_assignment(session, booking.id)
-    if assignment is not None:
+    if assignment is not None and assignment.status == AssignmentStatus.OFFERED:
         assignment.status = AssignmentStatus.WITHDRAWN
+        assignment.responded_at = datetime.now(UTC)
+    booking.hold_expires_at = None
     booking.status = BookingStatus.CANCELLED
     booking.cancel_reason = reason
     booking.cancelled_at = datetime.now(UTC)
@@ -585,20 +680,6 @@ async def list_bookings(
         .limit(limit)
     )
     return list(rows), total or 0
-
-
-async def busy_times(
-    session: AsyncSession, provider_id: UUID, start: datetime, end: datetime
-) -> list[datetime]:
-    rows = await session.scalars(
-        select(TreatmentSession.scheduled_at).where(
-            TreatmentSession.provider_id == provider_id,
-            TreatmentSession.status.in_(_OPEN_SESSION_STATUSES),
-            TreatmentSession.scheduled_at >= start,
-            TreatmentSession.scheduled_at < end,
-        )
-    )
-    return list(rows)
 
 
 async def count_bookings(session: AsyncSession, status: BookingStatus) -> int:

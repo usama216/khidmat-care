@@ -1,11 +1,11 @@
 """Physiotherapist endpoints: self-service onboarding, public listing and staff verification."""
 
-from datetime import UTC, date, datetime, time, timedelta
-from typing import Annotated
+from datetime import UTC, date, datetime
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from fastapi import APIRouter, Depends, Query, Request, status
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints
 
 from khidmat_api.core.database import SessionDep
 from khidmat_api.core.enums import Gender
@@ -15,16 +15,26 @@ from khidmat_api.core.requests import client_ip
 from khidmat_api.core.storage import Storage
 from khidmat_api.modules.audit.service import record_audit
 from khidmat_api.modules.bookings.admin_detail import provider_booking_stats
-from khidmat_api.modules.bookings.service import busy_times
+from khidmat_api.modules.bookings.calendar import (
+    CalendarView,
+    TimeOffView,
+    add_time_off,
+    delete_time_off,
+    provider_calendar,
+)
+from khidmat_api.modules.bookings.schedule import booking_window, free_slots, plan_days
 from khidmat_api.modules.catalog.settings_service import get_platform_settings
+from khidmat_api.modules.feedback.service import list_reviews
 from khidmat_api.modules.files.router import StorageDep
 from khidmat_api.modules.files.service import public_photo_url
 from khidmat_api.modules.identity.dependencies import (
     ProviderUserDep,
     ProviderVerifierDep,
     SettingsDep,
+    require_any_permission,
 )
 from khidmat_api.modules.identity.models import User
+from khidmat_api.modules.identity.permissions import Permission
 from khidmat_api.modules.providers.models import (
     Availability,
     DocumentType,
@@ -36,7 +46,6 @@ from khidmat_api.modules.providers.service import (
     VERIFICATION_CHECKS,
     ProfileInput,
     add_document,
-    build_slots,
     decide_provider,
     get_availability,
     get_provider_admin,
@@ -46,7 +55,9 @@ from khidmat_api.modules.providers.service import (
     list_providers_admin,
     list_public_providers,
     mask_cnic,
+    require_provider_for_user,
     reveal_cnic,
+    save_practice,
     save_profile,
     set_availability,
     set_verification_check,
@@ -58,6 +69,11 @@ public_router = APIRouter(prefix="/physios", tags=["physiotherapist"])
 admin_router = APIRouter(prefix="/admin/providers", tags=["admin"])
 
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=200)]
+# Operations need the calendar to assign orders; verifiers see it on the physio's record.
+BookingOrVerifierDep = Annotated[
+    User,
+    Depends(require_any_permission(Permission.BOOKINGS_MANAGE, Permission.PROVIDERS_VERIFY)),
+]
 
 
 class AvailabilitySlot(BaseModel):
@@ -82,13 +98,56 @@ class ProfileUpdate(BaseModel):
     area_ids: Annotated[list[UUID], Field(max_length=100)]
 
 
+VisitFilter = Literal["HOME", "CLINIC"]
+
+
+class Practice(BaseModel):
+    fee_pkr: int | None
+    slot_minutes: int
+    visit_home: bool
+    visit_clinic: bool
+    clinic_area_id: UUID | None
+
+
+def _practice(provider: Provider) -> dict[str, object]:
+    return {
+        "fee_pkr": provider.fee_pkr,
+        "slot_minutes": provider.slot_minutes,
+        "visit_home": provider.visit_home,
+        "visit_clinic": provider.visit_clinic,
+        "clinic_area_id": provider.clinic_area_id,
+    }
+
+
+class PracticeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fee_pkr: Annotated[int, Field(gt=0, le=1_000_000)] | None = None
+    slot_minutes: Literal[30, 45, 60] | None = None
+    visit_home: bool | None = None
+    visit_clinic: bool | None = None
+    clinic_address: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=500)]
+        | None
+    ) = None
+    clinic_area_id: UUID | None = None
+
+
+class TimeOffCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    start_at: AwareDatetime
+    end_at: AwareDatetime
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+
+
 class DocumentView(BaseModel):
     id: UUID
     type: DocumentType
     file_id: UUID
 
 
-class ProviderSelfView(BaseModel):
+class ProviderSelfView(Practice):
     id: UUID
     status: ProviderStatus
     status_reason: str | None
@@ -107,6 +166,9 @@ class ProviderSelfView(BaseModel):
     minimum_balance_pkr: int
     rating_avg: float
     rating_count: int
+    clinic_address: str | None
+    fee_min_pkr: int
+    fee_max_pkr: int
 
 
 class DocumentCreate(BaseModel):
@@ -128,7 +190,7 @@ class AvailabilityUpdate(BaseModel):
     slots: Annotated[list[AvailabilitySlot], Field(max_length=50)]
 
 
-class PublicPhysio(BaseModel):
+class PublicPhysio(Practice):
     id: UUID
     name: str | None
     gender: Gender
@@ -164,7 +226,34 @@ class ProviderStats(BaseModel):
     offers_rejected: int
 
 
+class PublicReview(BaseModel):
+    rating: int
+    comment: str | None
+    created_at: datetime
+
+
+class PublicPhysioProfile(PublicPhysio):
+    reviews: list[PublicReview]
+
+
+class PublicSlot(BaseModel):
+    start_at: datetime
+    available: bool
+
+
+class PublicDay(BaseModel):
+    day: date
+    slots: list[PublicSlot]
+
+
+class PhysioMatch(BaseModel):
+    physio: PublicPhysio
+    slots: list[datetime]
+
+
 class ProviderAdminDetail(ProviderAdminRow):
+    practice: Practice
+    clinic_address: str | None
     user_id: UUID
     rating_count: int
     joined_at: datetime
@@ -223,6 +312,10 @@ async def _self_view(
         minimum_balance_pkr=platform.minimum_balance_pkr,
         rating_avg=provider.rating_avg,
         rating_count=provider.rating_count,
+        clinic_address=provider.clinic_address,
+        fee_min_pkr=platform.fee_min_pkr,
+        fee_max_pkr=platform.fee_max_pkr,
+        **_practice(provider),
     )
 
 
@@ -292,6 +385,62 @@ async def update_availability(
     return [AvailabilitySlot.model_validate(row) for row in rows]
 
 
+@self_router.patch("/practice", summary="Set your fee, session length and visit types")
+async def update_practice(
+    payload: PracticeUpdate,
+    user: ProviderUserDep,
+    session: SessionDep,
+    storage: StorageDep,
+    settings: SettingsDep,
+) -> ProviderSelfView:
+    platform = await get_platform_settings(session)
+    provider = await save_practice(
+        session,
+        user,
+        payload.model_dump(exclude_unset=True),
+        (platform.fee_min_pkr, platform.fee_max_pkr),
+    )
+    return await _self_view(session, storage, provider, settings)
+
+
+@self_router.get("/calendar", summary="Your sessions, offers and time off")
+async def my_calendar(
+    user: ProviderUserDep,
+    session: SessionDep,
+    start: Annotated[date, Query()],
+    days: Annotated[int, Query(ge=1, le=42)] = 7,
+) -> CalendarView:
+    provider = await require_provider_for_user(session, user.id)
+    return await provider_calendar(session, provider, start, days)
+
+
+@self_router.post(
+    "/time-off", status_code=status.HTTP_201_CREATED, summary="Block time you can't work"
+)
+async def block_time(
+    payload: TimeOffCreate, user: ProviderUserDep, session: SessionDep
+) -> TimeOffView:
+    provider = await require_provider_for_user(session, user.id)
+    row = await add_time_off(
+        session,
+        provider,
+        payload.start_at.astimezone(UTC),
+        payload.end_at.astimezone(UTC),
+        payload.reason,
+    )
+    return TimeOffView(id=row.id, start_at=row.start_at, end_at=row.end_at, reason=row.reason)
+
+
+@self_router.delete(
+    "/time-off/{time_off_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Open blocked time again",
+)
+async def unblock_time(time_off_id: UUID, user: ProviderUserDep, session: SessionDep) -> None:
+    provider = await require_provider_for_user(session, user.id)
+    await delete_time_off(session, provider, time_off_id)
+
+
 async def _public_view(
     session: SessionDep, storage: Storage, provider: Provider, user: User
 ) -> PublicPhysio:
@@ -310,6 +459,7 @@ async def _public_view(
         service_type_ids=services,
         area_ids=areas,
         availability=[AvailabilitySlot.model_validate(row) for row in rows],
+        **_practice(provider),
     )
 
 
@@ -320,6 +470,7 @@ async def list_physios(
     service_id: UUID | None = None,
     area_id: UUID | None = None,
     gender: Gender | None = None,
+    visit_type: VisitFilter | None = None,
 ) -> list[PublicPhysio]:
     platform = await get_platform_settings(session)
     rows = await list_public_providers(
@@ -328,8 +479,98 @@ async def list_physios(
         service_id=service_id,
         area_id=area_id,
         gender=gender,
+        visit_type=visit_type,
     )
     return [await _public_view(session, storage, provider, user) for provider, user in rows]
+
+
+@public_router.get("/match", summary="Physiotherapists free at a chosen time")
+async def match_physios(
+    session: SessionDep,
+    storage: StorageDep,
+    service_id: UUID,
+    area_id: UUID,
+    day: Annotated[date, Query()],
+    from_minute: Annotated[int, Query(ge=0, le=1440)] = 0,
+    to_minute: Annotated[int, Query(ge=0, le=1440)] = 1440,
+    visit_type: VisitFilter = "HOME",
+    gender: Gender | None = None,
+) -> list[PhysioMatch]:
+    """Everyone who treats this problem, covers this area and has a free time in the window."""
+    platform = await get_platform_settings(session)
+    rows = await list_public_providers(
+        session,
+        minimum_balance=platform.minimum_balance_pkr,
+        service_id=service_id,
+        area_id=area_id,
+        gender=gender,
+        visit_type=visit_type,
+    )
+    matches = []
+    for provider, user in rows:
+        slots = []
+        for start in await free_slots(session, provider, day):
+            local = start.astimezone(LOCAL_TIMEZONE)
+            if from_minute <= local.hour * 60 + local.minute < to_minute:
+                slots.append(start)
+        if slots:
+            matches.append(
+                PhysioMatch(
+                    physio=await _public_view(session, storage, provider, user), slots=slots
+                )
+            )
+    return matches
+
+
+async def _bookable_provider(session: SessionDep, provider_id: UUID) -> tuple[Provider, User]:
+    platform = await get_platform_settings(session)
+    rows = await list_public_providers(
+        session,
+        minimum_balance=platform.minimum_balance_pkr,
+        service_id=None,
+        area_id=None,
+        gender=None,
+        provider_id=provider_id,
+    )
+    if not rows:
+        raise NotFoundError("This physiotherapist isn't available.")
+    return rows[0]
+
+
+@public_router.get("/{provider_id}", summary="One physiotherapist's public profile")
+async def physio_profile(
+    provider_id: UUID, session: SessionDep, storage: StorageDep
+) -> PublicPhysioProfile:
+    provider, user = await _bookable_provider(session, provider_id)
+    reviews, _ = await list_reviews(session, provider_id=provider.id, offset=0, limit=10)
+    view = await _public_view(session, storage, provider, user)
+    return PublicPhysioProfile(
+        **view.model_dump(),
+        # Reviews never carry the patient's name.
+        reviews=[
+            PublicReview(rating=row.rating, comment=row.comment, created_at=row.created_at)
+            for row in reviews
+        ],
+    )
+
+
+@public_router.get("/{provider_id}/schedule", summary="Bookable times over a run of days")
+async def physio_schedule(
+    provider_id: UUID,
+    session: SessionDep,
+    start: Annotated[date, Query()],
+    days: Annotated[int, Query(ge=1, le=42)] = 7,
+) -> list[PublicDay]:
+    provider, _ = await _bookable_provider(session, provider_id)
+    return [
+        PublicDay(
+            day=plan.day,
+            slots=[
+                PublicSlot(start_at=slot.start_at, available=slot.available) for slot in plan.slots
+            ],
+        )
+        for plan in await plan_days(session, provider, start, days)
+    ]
 
 
 @public_router.get("/{provider_id}/slots", summary="Open times on a day")
@@ -338,16 +579,13 @@ async def physio_slots(
     session: SessionDep,
     day: Annotated[date, Query()],
 ) -> list[datetime]:
-    today = datetime.now(LOCAL_TIMEZONE).date()
-    if day < today or day > today + timedelta(days=60):
+    today, last = booking_window()
+    if day < today or day > last:
         return []
     provider = await session.get(Provider, provider_id)
     if provider is None or provider.status != ProviderStatus.APPROVED:
         raise NotFoundError("This physiotherapist isn't available.")
-    start = datetime.combine(day, time.min, LOCAL_TIMEZONE)
-    busy = await busy_times(session, provider.id, start, start + timedelta(days=1))
-    earliest = datetime.now(UTC) + timedelta(minutes=30)
-    return build_slots(await get_availability(session, provider.id), day, busy, now=earliest)
+    return await free_slots(session, provider, day)
 
 
 # Staff ------------------------------------------------------------------------------------------
@@ -411,6 +649,8 @@ async def detail_admin(
     availability = await get_availability(session, provider.id)
     view = ProviderAdminDetail(
         **_admin_row(provider, user).model_dump(),
+        practice=Practice(**_practice(provider)),
+        clinic_address=provider.clinic_address,
         user_id=user.id,
         rating_count=provider.rating_count,
         joined_at=provider.created_at,
@@ -430,6 +670,18 @@ async def detail_admin(
     )
     await session.commit()
     return view
+
+
+@admin_router.get("/{provider_id}/calendar", summary="A physiotherapist's calendar")
+async def provider_calendar_admin(
+    provider_id: UUID,
+    _: BookingOrVerifierDep,
+    session: SessionDep,
+    start: Annotated[date, Query()],
+    days: Annotated[int, Query(ge=1, le=42)] = 7,
+) -> CalendarView:
+    provider, _user = await get_provider_admin(session, provider_id)
+    return await provider_calendar(session, provider, start, days)
 
 
 @admin_router.put("/{provider_id}/checks/{check}", summary="Tick or untick a verification check")

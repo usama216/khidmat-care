@@ -58,6 +58,7 @@ export const ur: Dictionary = {
     switchLang: "en",
     skip: "مواد پر جائیں",
     home: "ہوم",
+    find: "فزیو تلاش کریں",
   },
   hero: {
     eyebrow: "لاہور میں گھر پر فزیوتھراپی",

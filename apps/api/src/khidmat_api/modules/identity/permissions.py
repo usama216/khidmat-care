@@ -16,6 +16,7 @@ class Permission(StrEnum):
     COMPLAINTS_MANAGE = "complaints.manage"
     FINANCE_MANAGE = "finance.manage"
     SETTINGS_MANAGE = "settings.manage"
+    REPORTS_VIEW = "reports.view"
 
 
 STAFF_ROLES = frozenset(
@@ -31,11 +32,17 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.CATALOG_MANAGE,
             Permission.BOOKINGS_MANAGE,
             Permission.COMPLAINTS_MANAGE,
+            Permission.REPORTS_VIEW,
         }
     ),
     Role.VERIFICATION: frozenset({Permission.DASHBOARD_VIEW, Permission.PROVIDERS_VERIFY}),
     Role.FINANCE: frozenset(
-        {Permission.DASHBOARD_VIEW, Permission.FINANCE_MANAGE, Permission.SETTINGS_MANAGE}
+        {
+            Permission.DASHBOARD_VIEW,
+            Permission.FINANCE_MANAGE,
+            Permission.SETTINGS_MANAGE,
+            Permission.REPORTS_VIEW,
+        }
     ),
     Role.SUPPORT: frozenset(
         {

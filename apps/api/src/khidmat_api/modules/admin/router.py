@@ -1,15 +1,18 @@
 """Numbers for the admin dashboard's overview page."""
 
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from khidmat_api.core.database import SessionDep
+from khidmat_api.modules.admin.reports import Report, build_report
 from khidmat_api.modules.bookings.models import BookingStatus
 from khidmat_api.modules.bookings.service import count_bookings
 from khidmat_api.modules.catalog.service import count_active_packages, count_active_services
 from khidmat_api.modules.contact.service import count_new_messages, count_recent_messages
 from khidmat_api.modules.feedback.service import count_open_complaints
-from khidmat_api.modules.identity.dependencies import DashboardViewerDep
+from khidmat_api.modules.identity.dependencies import DashboardViewerDep, ReportsViewerDep
 from khidmat_api.modules.patients.service import count_patients
 from khidmat_api.modules.providers.models import ProviderStatus
 from khidmat_api.modules.providers.service import count_providers
@@ -53,3 +56,12 @@ async def overview(_: DashboardViewerDep, session: SessionDep) -> OverviewRespon
         pending_topups=await count_pending_topups(session),
         open_complaints=await count_open_complaints(session),
     )
+
+
+@router.get("/reports", summary="Orders, sessions, money and demand by month")
+async def reports(
+    _: ReportsViewerDep,
+    session: SessionDep,
+    months: Annotated[int, Query(ge=1, le=12)] = 6,
+) -> Report:
+    return await build_report(session, months)

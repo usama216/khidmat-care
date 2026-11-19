@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, false, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,6 +40,13 @@ class Provider(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("experience_years >= 0", name="experience_not_negative"),
         CheckConstraint("rating_avg BETWEEN 0 AND 5", name="rating_avg_range"),
         CheckConstraint("rating_count >= 0", name="rating_count_not_negative"),
+        CheckConstraint("fee_pkr > 0", name="fee_positive"),
+        CheckConstraint("slot_minutes IN (30, 45, 60)", name="slot_minutes_allowed"),
+        CheckConstraint("visit_home OR visit_clinic", name="offers_a_visit_type"),
+        CheckConstraint(
+            "NOT visit_clinic OR (clinic_address IS NOT NULL AND clinic_area_id IS NOT NULL)",
+            name="clinic_has_address",
+        ),
         Index("ix_providers_status_gender", "status", "gender"),
     )
 
@@ -70,6 +77,15 @@ class Provider(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Denormalised from reviews so listing and filtering providers doesn't aggregate each time.
     rating_avg: Mapped[float] = mapped_column(default=0)
     rating_count: Mapped[int] = mapped_column(default=0)
+
+    # Practice settings the physiotherapist manages. Not part of verification, so they can
+    # change them at any time. No fee means they can't be booked yet.
+    fee_pkr: Mapped[int | None]  # Per session, whole rupees.
+    slot_minutes: Mapped[int] = mapped_column(default=60, server_default="60")
+    visit_home: Mapped[bool] = mapped_column(default=True, server_default=true())
+    visit_clinic: Mapped[bool] = mapped_column(default=False, server_default=false())
+    clinic_address: Mapped[str | None] = mapped_column(String(500))
+    clinic_area_id: Mapped[UUID | None] = mapped_column(ForeignKey("areas.id"), index=True)
 
 
 class ProviderService(Base):
@@ -118,3 +134,18 @@ class Availability(UUIDPrimaryKeyMixin, Base):
     day_of_week: Mapped[int]  # 0 = Sunday ... 6 = Saturday
     start_minute: Mapped[int]  # Minutes from midnight, Asia/Karachi. 540 = 09:00.
     end_minute: Mapped[int]
+
+
+class ProviderTimeOff(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """A blocked stretch of time: leave, an emergency or a personal appointment."""
+
+    __tablename__ = "provider_time_off"
+    __table_args__ = (
+        CheckConstraint("start_at < end_at", name="ends_after_start"),
+        Index("ix_provider_time_off_provider_id_start_at", "provider_id", "start_at"),
+    )
+
+    provider_id: Mapped[UUID] = mapped_column(ForeignKey("providers.id", ondelete="CASCADE"))
+    start_at: Mapped[datetime]
+    end_at: Mapped[datetime]
+    reason: Mapped[str | None] = mapped_column(String(200))

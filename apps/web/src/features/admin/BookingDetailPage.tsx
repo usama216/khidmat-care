@@ -12,6 +12,7 @@ import {
   Flag,
   Footprints,
   Hand,
+  Hourglass,
   MapPin,
   MessageSquareWarning,
   Phone,
@@ -35,17 +36,29 @@ import {
   Timeline,
   type TimelineItem,
 } from "@/components/admin/records";
-import { adminButton, Badge, Card, EmptyState, ErrorState, formatDateTime } from "@/components/admin/ui";
+import {
+  adminButton,
+  adminInput,
+  Badge,
+  Card,
+  EmptyState,
+  errorMessage,
+  ErrorState,
+  formatDateTime,
+  FormError,
+} from "@/components/admin/ui";
 import { ChoosePhysioDialog } from "@/features/portal/ChoosePhysioDialog";
 import { BookingStatusBadge, ReasonDialog, SessionStatusBadge } from "@/features/portal/shared";
 import { formatPkr } from "@/lib/format";
 import { patientHref, physioHref } from "./BookingsPage";
 import { ComplaintBadge } from "./ComplaintsPage";
 import {
+  type StaffBooking,
   type StaffBookingDetail,
   type StaffSessionDetail,
   useBookingDetail,
   useCloseSession,
+  useUpdateHold,
 } from "./operationsApi";
 
 const RELATION: Record<string, string> = {
@@ -124,6 +137,13 @@ function BookingRecord({ data }: { data: StaffBookingDetail }) {
         ) : null}
       </div>
       {assigning ? <ChoosePhysioDialog booking={booking} staff onClose={() => setAssigning(false)} /> : null}
+      {booking.status === "AWAITING_ACCEPTANCE" ? <HoldPanel booking={booking} /> : null}
+      {booking.status === "PENDING_ASSIGNMENT" ? (
+        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
+          <strong className="font-semibold">Nobody has this order yet.</strong> Use &quot;Assign a physio&quot; to send it to someone free at{" "}
+          {formatDateTime(booking.preferred_start_at)}, or another time that suits the patient.
+        </p>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Order value" value={formatPkr(booking.price_total_pkr)} hint="Cash paid to the physio" icon={ShoppingBag} />
@@ -161,9 +181,12 @@ function BookingRecord({ data }: { data: StaffBookingDetail }) {
                     .join(" · ")}
                 </span>
               </DetailItem>
+              <DetailItem label="Visit">
+                {booking.visit_type === "CLINIC" ? "At the physio's clinic" : "Home visit"} · {booking.duration_minutes} min
+              </DetailItem>
               <DetailItem label="Area">{booking.area_name}</DetailItem>
-              <DetailItem label="Address" wide>
-                {booking.address_line ?? "-"}
+              <DetailItem label={booking.visit_type === "CLINIC" ? "Clinic address" : "Address"} wide>
+                {(booking.visit_type === "CLINIC" ? booking.clinic_address : booking.address_line) ?? "-"}
                 {data.lat !== null && data.lng !== null ? (
                   <a
                     href={`https://www.google.com/maps?q=${data.lat},${data.lng}`}
@@ -438,6 +461,14 @@ function timelineItems(data: StaffBookingDetail): TimelineItem[] {
         return { key, at: entry.at, icon: X, tone: "attention", title: `Declined${by}`, detail: entry.note };
       case "WITHDRAWN":
         return { key, at: entry.at, icon: Undo2, title: "Offer withdrawn" };
+      case "EXPIRED":
+        return {
+          key,
+          at: entry.at,
+          icon: Hourglass,
+          tone: "attention",
+          title: "No reply in time, so the held time was released",
+        };
       case "SESSION": {
         const step = SESSION_STEP[entry.status ?? ""] ?? { label: entry.status ?? "", icon: CalendarClock };
         return {
@@ -472,3 +503,59 @@ function timelineItems(data: StaffBookingDetail): TimelineItem[] {
   });
 }
 
+const EXTRA_HOURS = [1, 3, 6, 12, 24];
+
+/** While an offer waits for a reply, its time is held. Staff can give more time or let it go. */
+function HoldPanel({ booking }: { booking: StaffBooking }) {
+  const hold = useUpdateHold();
+  const [hours, setHours] = useState(3);
+  const expires = booking.hold_expires_at;
+  return (
+    <div className="mt-4 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="text-sm text-amber-950">
+          <p className="flex items-center gap-1.5 font-semibold">
+            <Hourglass className="size-4" aria-hidden="true" />
+            Waiting for {booking.provider?.name ?? "the physio"} to reply
+          </p>
+          <p className="mt-0.5">
+            {expires
+              ? `The time is held until ${formatDateTime(expires)}. With no reply by then, the order comes back here as Needs physio.`
+              : "The time is held until someone acts."}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label="Extra hours"
+            value={hours}
+            onChange={(event) => setHours(Number(event.target.value))}
+            className={`${adminInput} h-9 w-auto`}
+          >
+            {EXTRA_HOURS.map((value) => (
+              <option key={value} value={value}>
+                {value} {value === 1 ? "hour" : "hours"} from now
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={hold.isPending}
+            onClick={() => hold.mutate({ id: booking.id, action: "extend", hours })}
+            className={adminButton("secondary", "h-9")}
+          >
+            Give more time
+          </button>
+          <button
+            type="button"
+            disabled={hold.isPending}
+            onClick={() => hold.mutate({ id: booking.id, action: "release" })}
+            className={adminButton("secondary", "h-9 text-red-700")}
+          >
+            Release now
+          </button>
+        </div>
+      </div>
+      <FormError message={hold.isError ? errorMessage(hold.error) : null} />
+    </div>
+  );
+}

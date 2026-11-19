@@ -21,5 +21,13 @@ export const bilingualPaths = [
   "/contact/",
 ];
 
-// Legal pages are in English only for now.
-export const englishOnlyPaths = ["/terms/", "/privacy/", "/physio-agreement/"];
+// The physiotherapist directory, where patients compare and book. English only, like booking.
+export const findPhysioPath = "/physiotherapists/";
+
+// Legal pages and the directory are in English only for now.
+export const englishOnlyPaths = [findPhysioPath, "/terms/", "/privacy/", "/physio-agreement/"];
+
+/** Links to English-only pages keep their English address from the Urdu site. */
+export function linkPath(locale: Locale, path: string) {
+  return path === findPhysioPath ? path : localePath(locale, path);
+}

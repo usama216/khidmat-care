@@ -7,7 +7,9 @@ import type {
   AvailabilitySlot,
   BookingStatus,
   BookingView,
+  CalendarView,
   PatientPerson,
+  Practice,
   SessionView,
 } from "@/features/portal/api";
 
@@ -35,6 +37,8 @@ export type ProviderStats = {
 };
 
 export type ProviderDetail = ProviderRow & {
+  practice: Practice;
+  clinic_address: string | null;
   user_id: string;
   rating_count: number;
   joined_at: string;
@@ -128,6 +132,7 @@ export type TimelineType =
   | "ACCEPTED"
   | "REJECTED"
   | "WITHDRAWN"
+  | "EXPIRED"
   | "SESSION"
   | "RATED"
   | "COMPLAINT_RAISED"
@@ -169,7 +174,7 @@ export type StaffBookingDetail = {
   assignments: {
     provider_id: string;
     provider_name: string | null;
-    status: "OFFERED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+    status: "OFFERED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN" | "EXPIRED";
     reject_reason: string | null;
     offered_at: string;
     responded_at: string | null;
@@ -216,6 +221,47 @@ export type PlatformSettings = {
   commission_bps: number | null;
   minimum_balance_pkr: number;
   topup_instructions: string;
+  /** Hours a physiotherapist has to reply before the held time goes back to the team. */
+  hold_hours: number;
+  fee_min_pkr: number;
+  fee_max_pkr: number;
+};
+
+export type ReportMonth = {
+  month: string;
+  orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  sessions_completed: number;
+  collected_pkr: number;
+  commission_pkr: number;
+};
+export type Report = {
+  months: number;
+  since: string;
+  totals: {
+    orders: number;
+    sessions_completed: number;
+    collected_pkr: number;
+    commission_pkr: number;
+    new_patients: number;
+    offers_rejected: number;
+    offers_expired: number;
+    needs_physio_now: number;
+  };
+  by_month: ReportMonth[];
+  status_counts: Partial<Record<BookingStatus, number>>;
+  by_service: { name: string; orders: number }[];
+  by_area: { name: string; orders: number }[];
+  top_physios: {
+    provider_id: string;
+    name: string | null;
+    sessions_completed: number;
+    collected_pkr: number;
+    commission_pkr: number;
+    rating_avg: number;
+    rating_count: number;
+  }[];
 };
 
 const KEYS = {
@@ -227,6 +273,7 @@ const KEYS = {
   reviews: ["admin", "reviews"] as const,
   patients: ["admin", "patients"] as const,
   settings: ["admin", "settings"] as const,
+  reports: ["admin", "reports"] as const,
 };
 
 function useAdminMutation<TVariables, TResult = unknown>(mutationFn: (variables: TVariables) => Promise<TResult>) {
@@ -330,6 +377,29 @@ export function useAssignProvider() {
   return useAdminMutation(({ id, provider_id, start_at }: { id: string; provider_id: string; start_at: string }) =>
     apiPost(`/admin/bookings/${id}/assign`, { provider_id, start_at }),
   );
+}
+
+export function useUpdateHold() {
+  return useAdminMutation(({ id, action, hours }: { id: string; action: "extend" | "release"; hours?: number }) =>
+    apiPost(`/admin/bookings/${id}/hold`, { action, hours }),
+  );
+}
+
+export function useProviderCalendarAdmin(providerId: string, start: string, enabled = true) {
+  return useQuery<CalendarView, ApiError>({
+    queryKey: [...KEYS.providers, "calendar", providerId, start],
+    queryFn: () => apiGet<CalendarView>(`/admin/providers/${providerId}/calendar`, { start, days: 7 }),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useReport(months: number) {
+  return useQuery<Report, ApiError>({
+    queryKey: [...KEYS.reports, months],
+    queryFn: () => apiGet<Report>("/admin/reports", { months }),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useCloseSession() {

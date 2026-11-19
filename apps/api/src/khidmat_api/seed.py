@@ -2,13 +2,14 @@
 
 Run with: uv run python -m khidmat_api.seed
 
-Package prices aren't seeded: they're a business decision and are set from the admin panel.
+Each service gets a single-session option. Fees are set by each physiotherapist.
 """
 
 import asyncio
 from dataclasses import dataclass
 
 import structlog
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +57,8 @@ PHYSIO_SERVICES: tuple[SeedService, ...] = (
     SeedService("knee-joint", "Knee & joint pain", "گھٹنوں اور جوڑوں کا درد"),
     SeedService("elderly", "Elderly mobility", "بزرگوں کا چلنا پھرنا"),
     SeedService("sports", "Sports injuries", "کھیل کی چوٹیں"),
+    SeedService("neuro", "Neuro rehab", "اعصابی بحالی"),
+    SeedService("pediatric", "Children's physiotherapy", "بچوں کی فزیوتھراپی"),
 )
 
 
@@ -82,6 +85,17 @@ async def seed_reference_data(session: AsyncSession) -> None:
             ]
         )
         .on_conflict_do_nothing(index_elements=[ServiceType.slug])
+    )
+    # Prices come from each physiotherapist's fee, so a package only sets how many sessions.
+    # Every service can be booked for a single session.
+    await session.execute(
+        text(
+            "INSERT INTO service_packages "
+            "(id, service_type_id, sessions_count, price_pkr, is_active) "
+            "SELECT gen_random_uuid(), s.id, 1, 0, true FROM service_types s "
+            "WHERE NOT EXISTS (SELECT 1 FROM service_packages p "
+            "WHERE p.service_type_id = s.id AND p.sessions_count = 1 AND p.is_active)"
+        )
     )
 
 

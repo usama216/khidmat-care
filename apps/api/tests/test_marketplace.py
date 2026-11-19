@@ -95,6 +95,8 @@ async def _register_physio(
     )
     assert profile.status_code == 200, profile.text
     provider_id = profile.json()["id"]
+    practice = await physio.patch(f"{API}/provider/practice", json={"fee_pkr": 3000})
+    assert practice.status_code == 200, practice.text
     for document in ("CNIC_FRONT", "CNIC_BACK", "DEGREE"):
         file_id = await _upload(physio, "PROVIDER_DOCUMENT", "application/pdf", PDF)
         attached = await physio.post(
@@ -144,10 +146,8 @@ async def world(app: FastAPI, client: AsyncClient, session: AsyncSession) -> Asy
     await admin.patch(f"{API}/admin/settings", json={"commission_bps": 2000})
     services = (await admin.get(f"{API}/admin/catalog/services")).json()
     service_id = services[0]["id"]
-    single = await admin.post(
-        f"{API}/admin/catalog/services/{service_id}/packages",
-        json={"sessions_count": 1, "price_pkr": 3000},
-    )
+    # Every service comes with a single-session option.
+    single_id = next(p["id"] for p in services[0]["packages"] if p["sessions_count"] == 1)
     package = await admin.post(
         f"{API}/admin/catalog/services/{service_id}/packages",
         json={"sessions_count": 3, "price_pkr": 8000},
@@ -186,7 +186,7 @@ async def world(app: FastAPI, client: AsyncClient, session: AsyncSession) -> Asy
         provider_id=provider_id,
         service_id=service_id,
         area_id=area_id,
-        single_id=single.json()["id"],
+        single_id=single_id,
         package_id=package.json()["id"],
         patient_id=person.json()["id"],
         physio_phone="+923001000001",
@@ -768,7 +768,11 @@ async def test_commission_is_cut_once_when_a_session_completes(
 
 
 async def test_package_commission_adds_up_exactly(world: World, session: AsyncSession) -> None:
+    # Rs 2,667 x 3 = Rs 8,001, so the commission doesn't split evenly across sessions.
+    fee = await world.physio.patch(f"{API}/provider/practice", json={"fee_pkr": 2667})
+    assert fee.status_code == 200, fee.text
     booking = await _book(world, package=world.package_id)
+    assert booking["price_total_pkr"] == 8001
     job = await _accept(world, booking["id"])
     first = job["sessions"][0]["id"]
     await _finish(world, first)
@@ -793,7 +797,7 @@ async def test_package_commission_adds_up_exactly(world: World, session: AsyncSe
             WalletTransaction.type == "COMMISSION",
         )
     )
-    assert total == -1600, "20% of Rs 8,000 across three sessions"
+    assert total == -1600, "20% of Rs 8,001 across three sessions, rounded once"
     mine = (await world.patient.get(f"{API}/bookings")).json()["items"][0]
     assert mine["status"] == "COMPLETED"
 

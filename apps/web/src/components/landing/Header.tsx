@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { Dictionary } from "@/content/types";
 import { cn } from "@/lib/cn";
-import { localePath } from "@/lib/routes";
+import { findPhysioPath, linkPath, localePath } from "@/lib/routes";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { buttonClasses } from "@/components/ui/button";
 import { Logo } from "@/components/ui/Logo";
@@ -17,7 +17,11 @@ import { WhatsAppIcon } from "@/components/ui/WhatsAppIcon";
 export function Header({ t, path, altHref }: { t: Dictionary; path: string; altHref: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const links = [...t.nav.links, { href: "/for-physiotherapists/", label: t.nav.physios }];
+  const links = [
+    { href: findPhysioPath, label: t.nav.find },
+    ...t.nav.links,
+    { href: "/for-physiotherapists/", label: t.nav.physios },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -56,10 +60,10 @@ export function Header({ t, path, altHref }: { t: Dictionary; path: string; altH
           {links.map((link) => (
             <a
               key={link.href}
-              href={localePath(t.locale, link.href)}
+              href={linkPath(t.locale, link.href)}
               aria-current={isActive(link.href) ? "page" : undefined}
               className={cn(
-                "rounded-full px-3.5 py-2 text-[0.95rem] font-medium transition",
+                "rounded-full px-3 py-2 text-[0.92rem] font-medium whitespace-nowrap transition",
                 isActive(link.href)
                   ? "bg-brand-50 text-brand-800"
                   : "text-stone-600 hover:bg-stone-900/5 hover:text-stone-900",
@@ -115,7 +119,7 @@ export function Header({ t, path, altHref }: { t: Dictionary; path: string; altH
           {[{ href: "/", label: t.nav.home }, ...links].map((link) => (
             <a
               key={link.href}
-              href={localePath(t.locale, link.href)}
+              href={linkPath(t.locale, link.href)}
               onClick={close}
               aria-current={path === link.href || (link.href !== "/" && isActive(link.href)) ? "page" : undefined}
               className="rounded-2xl px-4 py-4 text-xl font-semibold text-stone-800 transition hover:bg-white aria-[current=page]:bg-white aria-[current=page]:text-brand-800"

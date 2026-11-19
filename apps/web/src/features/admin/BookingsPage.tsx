@@ -21,9 +21,9 @@ import { type BookingFilters, type StaffBooking, useAdminBookings } from "./oper
 
 const FILTERS: { value: BookingStatus | undefined; label: string }[] = [
   { value: undefined, label: "All" },
-  { value: "AWAITING_ACCEPTANCE", label: "Waiting" },
+  { value: "AWAITING_ACCEPTANCE", label: "Pending" },
   { value: "PENDING_ASSIGNMENT", label: "Needs physio" },
-  { value: "ACTIVE", label: "Active" },
+  { value: "ACTIVE", label: "Confirmed" },
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELLED", label: "Cancelled" },
 ];

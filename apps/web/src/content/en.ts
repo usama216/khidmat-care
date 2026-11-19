@@ -60,6 +60,7 @@ export const en: Dictionary = {
     switchLang: "ur",
     skip: "Skip to content",
     home: "Home",
+    find: "Find a physio",
   },
   hero: {
     eyebrow: "Home physiotherapy in Lahore",

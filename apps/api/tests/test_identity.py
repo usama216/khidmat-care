@@ -155,16 +155,35 @@ COMPLAINTS = (f"{ADMIN}/complaints", f"{ADMIN}/low-ratings")
 REVIEWS = f"{ADMIN}/reviews"
 PATIENTS = f"{ADMIN}/patients"
 PROVIDERS = f"{ADMIN}/providers"
+# Order handlers need a physio's calendar to assign work, without the rest of the physio record.
+PROVIDER_CALENDAR = f"{ADMIN}/providers/{{provider_id}}/calendar"
 FINANCE = (f"{ADMIN}/wallet", f"{ADMIN}/settings")
+REPORTS = f"{ADMIN}/reports"
 
 
 @pytest.mark.parametrize(
     ("role", "allowed_prefix"),
     [
-        (Role.OPERATIONS, (OVERVIEW, MESSAGES, CATALOG, BOOKINGS, PATIENTS, *COMPLAINTS, REVIEWS)),
-        (Role.SUPPORT, (OVERVIEW, MESSAGES, BOOKINGS, PATIENTS, *COMPLAINTS, REVIEWS)),
+        (
+            Role.OPERATIONS,
+            (
+                OVERVIEW,
+                MESSAGES,
+                CATALOG,
+                BOOKINGS,
+                PATIENTS,
+                *COMPLAINTS,
+                REVIEWS,
+                PROVIDER_CALENDAR,
+                REPORTS,
+            ),
+        ),
+        (
+            Role.SUPPORT,
+            (OVERVIEW, MESSAGES, BOOKINGS, PATIENTS, *COMPLAINTS, REVIEWS, PROVIDER_CALENDAR),
+        ),
         (Role.VERIFICATION, (OVERVIEW, PROVIDERS, REVIEWS)),
-        (Role.FINANCE, (OVERVIEW, *FINANCE)),
+        (Role.FINANCE, (OVERVIEW, *FINANCE, REPORTS)),
         (Role.PROVIDER, ()),
         (Role.PATIENT, ()),
     ],

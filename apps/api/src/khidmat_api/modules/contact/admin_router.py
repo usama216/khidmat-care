@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy import func, or_, select
 
 from khidmat_api.core.database import SessionDep
@@ -15,6 +15,7 @@ from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.audit.service import record_audit
 from khidmat_api.modules.contact.models import ContactMessage, ContactMessageStatus
 from khidmat_api.modules.identity.dependencies import MessagesManagerDep, SettingsDep
+from khidmat_api.modules.identity.models import User
 
 router = APIRouter(prefix="/admin/contact-messages", tags=["admin"])
 
@@ -30,12 +31,25 @@ class ContactMessageResponse(BaseModel):
     status: ContactMessageStatus
     created_at: datetime
     handled_at: datetime | None
+    reply_note: str | None
+    handled_by_name: str | None = None
 
 
 class ContactMessageUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: ContactMessageStatus
+    # What was said or done, e.g. "Called, booked a visit for Saturday".
+    reply_note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = (
+        None
+    )
+
+
+async def _view(session: SessionDep, message: ContactMessage) -> ContactMessageResponse:
+    handler = await session.get(User, message.handled_by_id) if message.handled_by_id else None
+    return ContactMessageResponse.model_validate(message).model_copy(
+        update={"handled_by_name": handler.name if handler else None}
+    )
 
 
 def _escape_like(term: str) -> str:
@@ -72,7 +86,7 @@ async def list_messages(
         .limit(params.page_size)
     )
     return Page(
-        items=[ContactMessageResponse.model_validate(row) for row in rows],
+        items=[await _view(session, row) for row in rows],
         total=total or 0,
         page=params.page,
         page_size=params.page_size,
@@ -93,9 +107,11 @@ async def update_message(
         raise NotFoundError("This message was not found.")
 
     message.status = payload.status
-    message.handled_at = (
-        datetime.now(UTC) if payload.status is ContactMessageStatus.HANDLED else None
-    )
+    handled = payload.status is ContactMessageStatus.HANDLED
+    message.handled_at = datetime.now(UTC) if handled else None
+    message.handled_by_id = admin.id if handled else None
+    if "reply_note" in payload.model_fields_set:
+        message.reply_note = payload.reply_note or None
     record_audit(
         session,
         actor_id=admin.id,
@@ -106,4 +122,4 @@ async def update_message(
         ip_address=client_ip(request, settings),
     )
     await session.commit()
-    return ContactMessageResponse.model_validate(message)
+    return await _view(session, message)

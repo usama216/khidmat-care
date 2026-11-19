@@ -15,34 +15,47 @@ import {
 import type { ApiError } from "@/lib/api";
 import type { BookingStatus, SessionView } from "./api";
 
-export function BookingStatusBadge({ status }: { status: BookingStatus }) {
+/**
+ * Pending -> Confirmed -> Completed, or Cancelled. An order nobody has taken yet shows as
+ * "Needs physio" to staff and "Finding a physio" to the patient.
+ */
+export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  AWAITING_ACCEPTANCE: "Pending",
+  PENDING_ASSIGNMENT: "Needs physio",
+  ACTIVE: "Confirmed",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+export function BookingStatusBadge({ status, patient }: { status: BookingStatus; patient?: boolean }) {
+  const label = BOOKING_STATUS_LABEL[status];
   switch (status) {
     case "AWAITING_ACCEPTANCE":
       return (
         <Badge tone="attention" icon={Clock}>
-          Waiting for physio
+          {label}
         </Badge>
       );
     case "PENDING_ASSIGNMENT":
       return (
         <Badge tone="attention" icon={CircleDot}>
-          Choose another physio
+          {patient ? "Finding a physio" : label}
         </Badge>
       );
     case "ACTIVE":
       return (
         <Badge tone="good" icon={CalendarClock}>
-          Active
+          {label}
         </Badge>
       );
     case "COMPLETED":
       return (
         <Badge tone="good" icon={Check}>
-          Completed
+          {label}
         </Badge>
       );
     default:
-      return <Badge icon={Ban}>Cancelled</Badge>;
+      return <Badge icon={Ban}>{label}</Badge>;
   }
 }
 

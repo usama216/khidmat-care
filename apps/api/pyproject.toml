@@ -53,6 +53,7 @@ ignore = [
 "migrations/versions/*" = ["E501"]
 # Reuses the order-journey fixture by importing it, which ruff reads as a redefinition.
 "tests/test_records.py" = ["F811"]
+"tests/test_scheduling.py" = ["F811"]
 
 [tool.mypy]
 python_version = "3.14"

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { PhysioAvailabilityPage } from "@/features/portal/PhysioPages";
+import { PhysioCalendarPage } from "@/features/portal/PhysioCalendar";
 
-export const metadata: Metadata = { title: "Availability" };
+export const metadata: Metadata = { title: "Calendar" };
 
 export default function Page() {
-  return <PhysioAvailabilityPage />;
+  return <PhysioCalendarPage />;
 }

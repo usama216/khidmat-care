@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 from itertools import pairwise
 from typing import Any
 from uuid import UUID
@@ -18,6 +18,7 @@ from khidmat_api.core.enums import Gender
 from khidmat_api.core.errors import ConflictError, NotFoundError
 from khidmat_api.core.phone import like_patterns
 from khidmat_api.modules.audit.service import record_audit
+from khidmat_api.modules.catalog.models import Area
 from khidmat_api.modules.files.models import FilePurpose
 from khidmat_api.modules.files.service import require_owned_file
 from khidmat_api.modules.identity.models import User
@@ -32,7 +33,7 @@ from khidmat_api.modules.providers.models import (
 )
 
 LOCAL_TIMEZONE = ZoneInfo("Asia/Karachi")
-SESSION_MINUTES = 60
+SLOT_LENGTHS = (30, 45, 60)
 _CNIC = re.compile(r"^\d{13}$")
 _REQUIRED_DOCUMENTS = {DocumentType.CNIC_FRONT, DocumentType.CNIC_BACK, DocumentType.DEGREE}
 VERIFICATION_CHECKS = ("documents", "cnic", "degree", "interview", "agreement")
@@ -206,6 +207,42 @@ async def submit_for_review(
     return provider
 
 
+async def save_practice(
+    session: AsyncSession, user: User, changes: dict[str, Any], fee_range: tuple[int, int]
+) -> Provider:
+    """Fee, session length and where the physiotherapist sees patients. Changes apply to new
+    orders only: orders already placed keep the price and length they were booked with."""
+    provider = await require_provider_for_user(session, user.id)
+    fee = changes.get("fee_pkr", provider.fee_pkr)
+    low, high = fee_range
+    if "fee_pkr" in changes and fee is not None and not low <= fee <= high:
+        raise ConflictError(f"Set a fee between Rs {low:,} and Rs {high:,} per session.")
+    if "slot_minutes" in changes and changes["slot_minutes"] not in SLOT_LENGTHS:
+        raise ConflictError("Sessions can be 30, 45 or 60 minutes long.")
+    # Checked on the merged values before anything changes, so a refused save leaves no trace.
+    merged = {
+        field: changes.get(field, getattr(provider, field))
+        for field in ("visit_home", "visit_clinic", "clinic_address", "clinic_area_id")
+    }
+    if not merged["visit_home"] and not merged["visit_clinic"]:
+        raise ConflictError("Choose home visits, clinic visits or both.")
+    if merged["visit_clinic"]:
+        if not merged["clinic_address"] or merged["clinic_area_id"] is None:
+            raise ConflictError("Enter your clinic's address and area.")
+        if await session.get(Area, merged["clinic_area_id"]) is None:
+            raise ConflictError("Choose a valid clinic area.")
+    else:
+        changes = {**changes, "clinic_address": None, "clinic_area_id": None}
+    for field, value in changes.items():
+        setattr(provider, field, value)
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ConflictError("Choose a valid clinic area.") from exc
+    return provider
+
+
 async def set_availability(
     session: AsyncSession, user: User, slots: list[tuple[int, int, int]]
 ) -> list[Availability]:
@@ -367,6 +404,16 @@ async def decide_provider(
 # Public -----------------------------------------------------------------------------------------
 
 
+def bookable_filters(minimum_balance: int) -> list[Any]:
+    """Who patients can book: approved, active, funded and with a fee set."""
+    return [
+        Provider.status == ProviderStatus.APPROVED,
+        User.is_active,
+        Provider.balance_pkr >= minimum_balance,
+        Provider.fee_pkr.is_not(None),
+    ]
+
+
 async def list_public_providers(
     session: AsyncSession,
     *,
@@ -374,18 +421,22 @@ async def list_public_providers(
     service_id: UUID | None,
     area_id: UUID | None,
     gender: Gender | None,
+    visit_type: str | None = None,
+    provider_id: UUID | None = None,
 ) -> list[tuple[Provider, User]]:
     """Approved physiotherapists who can take new orders. No contact details leave this query."""
     query = (
         select(Provider, User)
         .join(User, User.id == Provider.user_id)
-        .where(
-            Provider.status == ProviderStatus.APPROVED,
-            User.is_active,
-            Provider.balance_pkr >= minimum_balance,
-        )
+        .where(*bookable_filters(minimum_balance))
         .order_by(Provider.rating_avg.desc(), Provider.experience_years.desc())
     )
+    if provider_id is not None:
+        query = query.where(Provider.id == provider_id)
+    if visit_type == "HOME":
+        query = query.where(Provider.visit_home)
+    elif visit_type == "CLINIC":
+        query = query.where(Provider.visit_clinic)
     if gender is not None:
         query = query.where(Provider.gender == gender)
     if service_id is not None:
@@ -397,44 +448,18 @@ async def list_public_providers(
             )
         )
     if area_id is not None:
-        query = query.where(
-            Provider.id.in_(select(ProviderArea.provider_id).where(ProviderArea.area_id == area_id))
+        home = Provider.visit_home & Provider.id.in_(
+            select(ProviderArea.provider_id).where(ProviderArea.area_id == area_id)
         )
+        clinic = Provider.visit_clinic & (Provider.clinic_area_id == area_id)
+        if visit_type == "HOME":
+            query = query.where(home)
+        elif visit_type == "CLINIC":
+            query = query.where(clinic)
+        else:
+            query = query.where(or_(home, clinic))
     rows = await session.execute(query.limit(100))
     return [(provider, user) for provider, user in rows.all()]
-
-
-def is_within_availability(rows: list[Availability], start: datetime) -> bool:
-    local = start.astimezone(LOCAL_TIMEZONE)
-    day = (local.weekday() + 1) % 7  # Python's Monday=0 becomes our Sunday=0.
-    minute = local.hour * 60 + local.minute
-    return any(
-        row.day_of_week == day
-        and row.start_minute <= minute
-        and minute + SESSION_MINUTES <= row.end_minute
-        for row in rows
-    )
-
-
-def build_slots(
-    rows: list[Availability], day: date, busy: list[datetime], *, now: datetime
-) -> list[datetime]:
-    """Hourly start times on a day, excluding past times and times the physiotherapist is busy."""
-    weekday = (day.weekday() + 1) % 7
-    slots: list[datetime] = []
-    for row in rows:
-        if row.day_of_week != weekday:
-            continue
-        minute = row.start_minute
-        while minute + SESSION_MINUTES <= row.end_minute:
-            start = datetime(
-                day.year, day.month, day.day, minute // 60, minute % 60, tzinfo=LOCAL_TIMEZONE
-            )
-            clashes = any(abs(start - other) < timedelta(minutes=SESSION_MINUTES) for other in busy)
-            if start > now and not clashes:
-                slots.append(start)
-            minute += SESSION_MINUTES
-    return sorted(slots)
 
 
 async def update_provider_rating(session: AsyncSession, provider_id: UUID, rating: int) -> None:

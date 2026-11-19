@@ -39,13 +39,16 @@ import {
   FormField,
   Modal,
   Pagination,
+  Skeleton,
   TableSkeleton,
 } from "@/components/admin/ui";
+import { CalendarLegend, WeekNavigator, WeekView } from "@/components/calendar/WeekView";
 import { useCan } from "@/features/auth/auth";
 import { useCatalog } from "@/features/portal/api";
 import { availabilitySummary, PhysioPhoto } from "@/features/portal/FindPage";
 import { ReasonDialog } from "@/features/portal/shared";
 import { cn } from "@/lib/cn";
+import { todayKey, weekStart } from "@/lib/dates";
 import { formatPkr } from "@/lib/format";
 import { useRecordHistory } from "./api";
 import { OrdersTable, orderHref } from "./BookingsPage";
@@ -57,6 +60,7 @@ import {
   useComplaints,
   useDecideProvider,
   useLedger,
+  useProviderCalendarAdmin,
   useProviderDetail,
   useReviews,
   useSetCheck,
@@ -81,7 +85,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
   OTHER: "Other document",
 };
 
-type Tab = "overview" | "orders" | "balance" | "feedback" | "history";
+type Tab = "overview" | "calendar" | "orders" | "balance" | "feedback" | "history";
 
 export function ProviderDetailPage() {
   const id = useSearchParams().get("id");
@@ -115,6 +119,7 @@ function ProviderRecord({ data }: { data: ProviderDetail }) {
   const seesReviews = can("complaints.manage") || can("providers.verify");
   const tabs: { value: Tab; label: string; count?: number }[] = [
     { value: "overview", label: "Overview" },
+    { value: "calendar", label: "Calendar" },
     ...(can("bookings.manage") ? [{ value: "orders" as const, label: "Orders", count: data.stats.orders_total }] : []),
     ...(can("finance.manage") ? [{ value: "balance" as const, label: "Balance" }] : []),
     ...(seesReviews ? [{ value: "feedback" as const, label: "Ratings & complaints", count: data.rating_count }] : []),
@@ -182,6 +187,7 @@ function ProviderRecord({ data }: { data: ProviderDetail }) {
       </div>
       <div className="mt-6">
         {tab === "overview" ? <OverviewTab data={data} /> : null}
+        {tab === "calendar" ? <CalendarTab providerId={data.id} /> : null}
         {tab === "orders" ? <OrdersTab providerId={data.id} /> : null}
         {tab === "balance" ? <BalanceTab data={data} /> : null}
         {tab === "feedback" ? <FeedbackTab providerId={data.id} complaints={can("complaints.manage")} /> : null}
@@ -272,6 +278,21 @@ function OverviewTab({ data }: { data: ProviderDetail }) {
             <DetailItem label="Agreement accepted">
               {data.agreement_accepted_at ? formatDateTime(data.agreement_accepted_at) : "Not yet"}
             </DetailItem>
+            <DetailItem label="Fee per session">
+              {data.practice.fee_pkr ? formatPkr(data.practice.fee_pkr) : <span className="text-amber-800">Not set: can&apos;t be booked</span>}
+            </DetailItem>
+            <DetailItem label="Visits">
+              {[data.practice.visit_home ? "Home" : null, data.practice.visit_clinic ? "Clinic" : null].filter(Boolean).join(" and ")} ·{" "}
+              {data.practice.slot_minutes} min sessions
+            </DetailItem>
+            {data.practice.visit_clinic ? (
+              <DetailItem label="Clinic" wide>
+                {data.clinic_address ?? "-"}
+                {data.practice.clinic_area_id
+                  ? ` (${catalog.data?.areas.find((a) => a.id === data.practice.clinic_area_id)?.name ?? ""})`
+                  : ""}
+              </DetailItem>
+            ) : null}
             <DetailItem label="Treatments">{services?.length ? services.join(", ") : "-"}</DetailItem>
             <DetailItem label="Areas" wide>
               {areas?.length ? areas.join(", ") : "-"}
@@ -698,3 +719,24 @@ function HistoryTab({ providerId }: { providerId: string }) {
   );
 }
 
+function CalendarTab({ providerId }: { providerId: string }) {
+  const [start, setStart] = useState(() => weekStart(todayKey()));
+  const calendar = useProviderCalendarAdmin(providerId, start);
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <WeekNavigator start={start} onChange={setStart} />
+        <CalendarLegend />
+      </div>
+      {calendar.isPending ? (
+        <Skeleton className="h-72 w-full" />
+      ) : calendar.isError ? (
+        <Card>
+          <ErrorState onRetry={() => void calendar.refetch()} />
+        </Card>
+      ) : (
+        <WeekView view={calendar.data} eventHref={(event) => orderHref(event.booking_id)} />
+      )}
+    </div>
+  );
+}

@@ -128,7 +128,8 @@ async def test_service_and_package_lifecycle(admin_client: AsyncClient) -> None:
     assert updated.json()["price_pkr"] == 28000
 
     services = (await admin_client.get(f"{BASE}/catalog/services")).json()
-    assert services[0]["packages"][0]["price_pkr"] == 28000
+    sizes = {p["sessions_count"]: p["price_pkr"] for p in services[0]["packages"]}
+    assert sizes == {1: 0, 10: 28000}, "A new service starts with a single-session option"
 
     hidden = await admin_client.patch(
         f"{BASE}/catalog/services/{service_id}", json={"is_active": False}
@@ -155,7 +156,7 @@ async def test_invalid_services_are_rejected(
     "payload",
     [
         {"sessions_count": 0, "price_pkr": 1000},
-        {"sessions_count": 5, "price_pkr": 0},
+        {"sessions_count": 5, "price_pkr": -1},
         {"sessions_count": 5, "price_pkr": 1.5},
     ],
 )
@@ -190,7 +191,26 @@ async def test_settings_are_validated_and_saved(admin_client: AsyncClient) -> No
         "commission_bps": 2000,
         "minimum_balance_pkr": 900,
         "topup_instructions": "JazzCash 0300",
+        "hold_hours": 3,
+        "fee_min_pkr": 1000,
+        "fee_max_pkr": 10000,
     }
+
+
+async def test_hold_time_and_fee_range_are_admin_settings(admin_client: AsyncClient) -> None:
+    for bad in ({"hold_hours": 0}, {"hold_hours": 73}, {"fee_min_pkr": 50}):
+        assert (await admin_client.patch(f"{BASE}/settings", json=bad)).status_code == 422
+    crossed = await admin_client.patch(
+        f"{BASE}/settings", json={"fee_min_pkr": 6000, "fee_max_pkr": 5000}
+    )
+    assert crossed.status_code == 409
+    saved = await admin_client.patch(
+        f"{BASE}/settings", json={"hold_hours": 6, "fee_min_pkr": 1500, "fee_max_pkr": 5000}
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["hold_hours"] == 6
+    terms = (await admin_client.get("/api/v1/catalog/physio-terms")).json()
+    assert (terms["fee_min_pkr"], terms["fee_max_pkr"]) == (1500, 5000)
 
 
 async def test_overview_counts_real_data(admin_client: AsyncClient, session: AsyncSession) -> None:

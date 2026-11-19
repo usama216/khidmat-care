@@ -217,6 +217,13 @@ const settingsSchema = z.object({
     .min(0, "Must be 0 or more.")
     .max(1_000_000, "This amount is too high."),
   instructions: z.string().trim().max(2000, "Keep this under 2000 characters."),
+  hold: z.coerce
+    .number<string>("Enter a number.")
+    .int("Enter whole hours.")
+    .min(1, "At least 1 hour.")
+    .max(72, "At most 72 hours."),
+  feeMin: z.coerce.number<string>("Enter a number.").int("Enter whole rupees.").min(100, "At least Rs 100."),
+  feeMax: z.coerce.number<string>("Enter a number.").int("Enter whole rupees.").max(1_000_000, "This amount is too high."),
 });
 
 function SettingsForm({ initial }: { initial: PlatformSettings }) {
@@ -225,19 +232,26 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
   const [commission, setCommission] = useState(initial.commission_bps === null ? "" : String(initial.commission_bps / 100));
   const [minimum, setMinimum] = useState(String(initial.minimum_balance_pkr));
   const [instructions, setInstructions] = useState(initial.topup_instructions);
+  const [hold, setHold] = useState(String(initial.hold_hours));
+  const [feeMin, setFeeMin] = useState(String(initial.fee_min_pkr));
+  const [feeMax, setFeeMax] = useState(String(initial.fee_max_pkr));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [saved, setSaved] = useState(false);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     setSaved(false);
-    const parsed = settingsSchema.safeParse({ commission, minimum, instructions });
-    if (!parsed.success || commission.trim() === "") {
-      const fields = parsed.success ? {} : parsed.error.flatten().fieldErrors;
+    const parsed = settingsSchema.safeParse({ commission, minimum, instructions, hold, feeMin, feeMax });
+    const crossed = parsed.success && parsed.data.feeMin > parsed.data.feeMax;
+    if (!parsed.success || commission.trim() === "" || crossed) {
+      const fields = (parsed.success ? {} : parsed.error.flatten().fieldErrors) as Record<string, string[] | undefined>;
       setErrors({
-        commission: commission.trim() === "" ? "Enter a percentage." : (fields as Record<string, string[]>).commission?.[0],
-        minimum: (fields as Record<string, string[]>).minimum?.[0],
-        instructions: (fields as Record<string, string[]>).instructions?.[0],
+        commission: commission.trim() === "" ? "Enter a percentage." : fields.commission?.[0],
+        minimum: fields.minimum?.[0],
+        instructions: fields.instructions?.[0],
+        hold: fields.hold?.[0],
+        feeMin: fields.feeMin?.[0] ?? (crossed ? "The lowest fee can't be more than the highest." : undefined),
+        feeMax: fields.feeMax?.[0],
       });
       return;
     }
@@ -247,6 +261,9 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
         commission_bps: Math.round(parsed.data.commission * 100),
         minimum_balance_pkr: parsed.data.minimum,
         topup_instructions: parsed.data.instructions,
+        hold_hours: parsed.data.hold,
+        fee_min_pkr: parsed.data.feeMin,
+        fee_max_pkr: parsed.data.feeMax,
       },
       { onSuccess: () => setSaved(true) },
     );
@@ -275,6 +292,43 @@ function SettingsForm({ initial }: { initial: PlatformSettings }) {
             className={adminInput}
           />
         </FormField>
+        <FormField
+          id={`${id}-hold`}
+          label="Reply time for physiotherapists (hours)"
+          hint="A pending order holds its time for this long. With no reply, it goes to Orders as Needs physio. Visits soon get less time, so the patient always hears back at least 1 hour before."
+          error={errors.hold}
+        >
+          <input
+            id={`${id}-hold`}
+            inputMode="numeric"
+            value={hold}
+            onChange={(event) => setHold(event.target.value)}
+            aria-invalid={Boolean(errors.hold)}
+            className={adminInput}
+          />
+        </FormField>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField id={`${id}-feemin`} label="Lowest fee a physio can set (PKR)" error={errors.feeMin}>
+            <input
+              id={`${id}-feemin`}
+              inputMode="numeric"
+              value={feeMin}
+              onChange={(event) => setFeeMin(event.target.value)}
+              aria-invalid={Boolean(errors.feeMin)}
+              className={adminInput}
+            />
+          </FormField>
+          <FormField id={`${id}-feemax`} label="Highest fee (PKR)" hint="Per session." error={errors.feeMax}>
+            <input
+              id={`${id}-feemax`}
+              inputMode="numeric"
+              value={feeMax}
+              onChange={(event) => setFeeMax(event.target.value)}
+              aria-invalid={Boolean(errors.feeMax)}
+              className={adminInput}
+            />
+          </FormField>
+        </div>
         <FormField id={`${id}-instructions`} label="Top-up payment details" hint="Shown to physiotherapists, e.g. your JazzCash, Easypaisa or bank account." error={errors.instructions}>
           <textarea
             id={`${id}-instructions`}

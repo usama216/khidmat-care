@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, CircleDot, Phone, RotateCcw, Search } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { Check, CircleDot, MessageCircle, Phone, RotateCcw, Search } from "lucide-react";
 import {
   adminButton,
   adminInput,
@@ -12,6 +12,7 @@ import {
   ErrorState,
   formatDateTime,
   FormError,
+  FormField,
   Modal,
   PageHeader,
   Pagination,
@@ -23,18 +24,18 @@ import { useMessages, useUpdateMessage, type ContactMessage, type MessageStatus 
 
 const FILTERS: { value: MessageStatus | undefined; label: string }[] = [
   { value: undefined, label: "All" },
-  { value: "NEW", label: "New" },
-  { value: "HANDLED", label: "Handled" },
+  { value: "NEW", label: "Open" },
+  { value: "HANDLED", label: "Answered" },
 ];
 
 function StatusBadge({ status }: { status: MessageStatus }) {
   return status === "NEW" ? (
     <Badge tone="attention" icon={CircleDot}>
-      New
+      Open
     </Badge>
   ) : (
     <Badge tone="good" icon={Check}>
-      Handled
+      Answered
     </Badge>
   );
 }
@@ -107,7 +108,7 @@ export function MessagesPage() {
           <ErrorState onRetry={() => void messages.refetch()} />
         ) : items.length === 0 ? (
           <EmptyState
-            title={search ? "No messages match your search" : status === "NEW" ? "You're all caught up" : "No messages yet"}
+            title={search ? "No messages match your search" : status === "NEW" ? "No open messages. You're all caught up" : "No messages yet"}
             description={search ? "Try a different name or number." : "New contact form messages will appear here."}
           />
         ) : (
@@ -175,8 +176,11 @@ export function MessagesPage() {
 }
 
 function MessageDrawer({ message, onClose }: { message: ContactMessage; onClose: () => void }) {
+  const id = useId();
   const update = useUpdateMessage();
   const handled = message.status === "HANDLED";
+  const [note, setNote] = useState(message.reply_note ?? "");
+  const digits = message.phone.replace(/[^\d]/g, "");
 
   return (
     <Modal title={message.name} onClose={onClose} side>
@@ -184,24 +188,60 @@ function MessageDrawer({ message, onClose }: { message: ContactMessage; onClose:
         <StatusBadge status={message.status} />
         <p className="text-xs text-stone-500">{formatDateTime(message.created_at)}</p>
       </div>
-      <a href={`tel:${message.phone}`} className={adminButton("secondary", "mt-5 w-full")}>
-        <Phone className="size-4" aria-hidden="true" />
-        Call <span className="tabular-nums">{message.phone}</span>
-      </a>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <a href={`tel:${message.phone}`} className={adminButton("secondary")}>
+          <Phone className="size-4" aria-hidden="true" />
+          Call
+        </a>
+        <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" className={adminButton("secondary")}>
+          <MessageCircle className="size-4" aria-hidden="true" />
+          WhatsApp
+        </a>
+      </div>
+      <p className="mt-2 text-center text-xs text-stone-500 tabular-nums">{message.phone}</p>
       <p dir="auto" className="mt-5 rounded-lg bg-stone-50 p-4 text-sm leading-relaxed whitespace-pre-wrap text-stone-800 ring-1 ring-stone-200">
         {message.message}
       </p>
       <div className="mt-5 space-y-3">
+        <FormField id={`${id}-note`} label="Your reply or what you did" hint="Only the team sees this, e.g. Called, booked for Saturday.">
+          <textarea
+            id={`${id}-note`}
+            rows={3}
+            maxLength={2000}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            className={cn(adminInput, "h-auto py-2")}
+          />
+        </FormField>
+        {handled && message.handled_at ? (
+          <p className="text-xs text-stone-500">
+            Answered {formatDateTime(message.handled_at)}
+            {message.handled_by_name ? ` by ${message.handled_by_name}` : ""}
+          </p>
+        ) : null}
         <FormError message={update.isError ? errorMessage(update.error) : null} />
         <button
           type="button"
           disabled={update.isPending}
-          onClick={() => update.mutate({ id: message.id, status: handled ? "NEW" : "HANDLED" })}
-          className={adminButton(handled ? "secondary" : "primary", "w-full")}
+          onClick={() =>
+            update.mutate({ id: message.id, status: "HANDLED", reply_note: note.trim() || null }, { onSuccess: onClose })
+          }
+          className={adminButton("primary", "w-full")}
         >
-          {handled ? <RotateCcw className="size-4" aria-hidden="true" /> : <Check className="size-4" aria-hidden="true" />}
-          {handled ? "Move back to new" : "Mark as handled"}
+          <Check className="size-4" aria-hidden="true" />
+          {handled ? "Save note" : "Mark as answered"}
         </button>
+        {handled ? (
+          <button
+            type="button"
+            disabled={update.isPending}
+            onClick={() => update.mutate({ id: message.id, status: "NEW", reply_note: note.trim() || null })}
+            className={adminButton("secondary", "w-full")}
+          >
+            <RotateCcw className="size-4" aria-hidden="true" />
+            Move back to open
+          </button>
+        ) : null}
       </div>
     </Modal>
   );

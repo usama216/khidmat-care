@@ -97,6 +97,7 @@ BookingManagerDep = Annotated[User, Depends(require_permission(Permission.BOOKIN
 ComplaintManagerDep = Annotated[User, Depends(require_permission(Permission.COMPLAINTS_MANAGE))]
 FinanceManagerDep = Annotated[User, Depends(require_permission(Permission.FINANCE_MANAGE))]
 SettingsManagerDep = Annotated[User, Depends(require_permission(Permission.SETTINGS_MANAGE))]
+ReportsViewerDep = Annotated[User, Depends(require_permission(Permission.REPORTS_VIEW))]
 # Ratings matter both to complaint handling and to deciding whether a physio stays active.
 ReviewViewerDep = Annotated[
     User,
