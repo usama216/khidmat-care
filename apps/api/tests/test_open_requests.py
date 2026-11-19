@@ -262,3 +262,45 @@ async def test_dashboard_counts_requests_the_physio_can_pick(
     await _request(world)
     dashboard = (await world.physio.get(f"{API}/provider/dashboard")).json()
     assert dashboard["open_requests"] == 1
+
+
+async def test_staff_see_who_was_alerted_and_why_others_were_not(
+    world: World, second: AsyncClient, whatsapp: FakeWhatsApp
+) -> None:
+    await _book(world)  # The first physio is now busy at 10 am.
+    order = await _request(world)
+    report = (await world.admin.get(f"{API}/admin/bookings/{order['id']}/alerts")).json()
+    assert report["whatsapp_configured"] is True
+    assert report["order_open"] is True
+    by_phone = {check["phone"]: check for check in report["checks"]}
+    assert by_phone[SECOND_PHONE]["alert_status"] == "SENT"
+    busy = by_phone[world.physio_phone]
+    assert busy["eligible"] is False
+    assert busy["alert_status"] is None
+    assert busy["reasons"][0].startswith("Not free then")
+
+
+async def test_staff_can_resend_after_fixing_a_physio(
+    world: World, second: AsyncClient, whatsapp: FakeWhatsApp
+) -> None:
+    await second.patch(f"{API}/provider/practice", json={"whatsapp_alerts": False})
+    order = await _request(world)
+    assert whatsapp.to() == {world.physio_phone}
+    report = (await world.admin.get(f"{API}/admin/bookings/{order['id']}/alerts")).json()
+    off = next(check for check in report["checks"] if check["phone"] == SECOND_PHONE)
+    assert off["reasons"] == ["Turned WhatsApp alerts off."]
+
+    await second.patch(f"{API}/provider/practice", json={"whatsapp_alerts": True})
+    resent = await world.admin.post(f"{API}/admin/bookings/{order['id']}/alerts/send")
+    assert resent.json() == {"sent": 1}, "Only the newly eligible physio is messaged"
+    assert whatsapp.to() == {world.physio_phone, SECOND_PHONE}
+
+
+async def test_report_says_when_whatsapp_is_not_set_up(world: World) -> None:
+    order = await _request(world)
+    report = (await world.admin.get(f"{API}/admin/bookings/{order['id']}/alerts")).json()
+    assert report["whatsapp_configured"] is False
+    assert report["checks"][0]["eligible"] is True
+    refused = await world.admin.post(f"{API}/admin/bookings/{order['id']}/alerts/send")
+    assert refused.status_code == 409
+    assert "WHATSAPP_ACCESS_TOKEN" in refused.json()["error"]["message"]

@@ -46,7 +46,12 @@ from khidmat_api.modules.notifications.whatsapp import (
     WhatsAppSender,
 )
 from khidmat_api.modules.patients.models import Patient
-from khidmat_api.modules.providers.models import Provider, ProviderArea, ProviderService
+from khidmat_api.modules.providers.models import (
+    Provider,
+    ProviderArea,
+    ProviderService,
+    ProviderStatus,
+)
 from khidmat_api.modules.providers.service import LOCAL_TIMEZONE, bookable_filters
 
 logger = structlog.get_logger("khidmat.open_requests")
@@ -358,3 +363,107 @@ async def alert_counts(session: AsyncSession, booking_id: UUID) -> tuple[int, in
         sum(1 for status in statuses if status == NotificationStatus.SENT),
         sum(1 for status in statuses if status == NotificationStatus.FAILED),
     )
+
+
+# Why an alert did or didn't go out --------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AlertCheck:
+    provider_id: UUID
+    name: str | None
+    phone: str
+    eligible: bool
+    reasons: list[str]
+    alert_status: str | None
+    alert_error: str | None
+    alerted_at: datetime | None
+
+
+async def check_alerts(session: AsyncSession, booking: Booking) -> list[AlertCheck]:
+    """For every approved physiotherapist: would they be alerted for this order, and if not, why.
+
+    Staff use it to see why nobody got a WhatsApp, without reading server logs.
+    """
+    platform = await get_platform_settings(session)
+    passed = await _passed_on(session, booking.id)
+    area = await session.get(Area, booking.area_id)
+    service = await session.get(ServiceType, booking.service_type_id)
+    area_name = area.name if area else "this area"
+    sent: dict[UUID, Notification] = {}
+    for row in await session.scalars(
+        select(Notification)
+        .where(
+            Notification.booking_id == booking.id,
+            Notification.type == NotificationType.OPEN_REQUEST,
+        )
+        .order_by(Notification.created_at)
+    ):
+        sent[row.user_id] = row
+    rows = await session.execute(
+        select(Provider, User)
+        .join(User, User.id == Provider.user_id)
+        .where(Provider.status == ProviderStatus.APPROVED)
+        .order_by(Provider.rating_avg.desc(), Provider.experience_years.desc())
+        .limit(200)
+    )
+    checks = []
+    for provider, user in rows.all():
+        services = set(
+            await session.scalars(
+                select(ProviderService.service_type_id).where(
+                    ProviderService.provider_id == provider.id
+                )
+            )
+        )
+        areas = set(
+            await session.scalars(
+                select(ProviderArea.area_id).where(ProviderArea.provider_id == provider.id)
+            )
+        )
+        reasons: list[str] = []
+        if not user.is_active:
+            reasons.append("Account is inactive.")
+        if not provider.whatsapp_alerts:
+            reasons.append("Turned WhatsApp alerts off.")
+        if provider.fee_pkr is None:
+            reasons.append("No fee set.")
+        if provider.balance_pkr < platform.minimum_balance_pkr:
+            reasons.append(f"Balance is below the Rs {platform.minimum_balance_pkr:,} minimum.")
+        if booking.service_type_id not in services:
+            reasons.append(f"Doesn't treat {service.name if service else 'this'}.")
+        if booking.visit_type == VisitType.CLINIC:
+            if not provider.visit_clinic or provider.clinic_area_id != booking.area_id:
+                reasons.append(f"Has no clinic in {area_name}.")
+        elif not provider.visit_home:
+            reasons.append("Doesn't do home visits.")
+        elif booking.area_id not in areas:
+            reasons.append(f"Doesn't cover {area_name}.")
+        if provider.id in passed:
+            reasons.append("Declined this order, or didn't reply in time.")
+        try:
+            await require_free_slot(
+                session,
+                provider,
+                booking.preferred_start_at,
+                provider.slot_minutes,
+                ignore_booking=booking.id,
+            )
+        except ConflictError as exc:
+            reasons.append(f"Not free then: {exc.message}")
+        alert = sent.get(user.id)
+        checks.append(
+            AlertCheck(
+                provider_id=provider.id,
+                name=user.name,
+                phone=user.phone,
+                eligible=not reasons,
+                reasons=reasons,
+                alert_status=alert.status.value if alert else None,
+                alert_error=alert.error if alert else None,
+                alerted_at=alert.sent_at or alert.created_at if alert else None,
+            )
+        )
+    # Those who got or would get an alert first, then the rest.
+    checks.sort(key=lambda check: (check.alert_status is None, not check.eligible))
+    return checks

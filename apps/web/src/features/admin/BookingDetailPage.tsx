@@ -50,6 +50,7 @@ import {
 import { ChoosePhysioDialog } from "@/features/portal/ChoosePhysioDialog";
 import { BookingStatusBadge, ReasonDialog, SessionStatusBadge } from "@/features/portal/shared";
 import { formatPkr } from "@/lib/format";
+import { AlertsSection } from "./AlertsSection";
 import { patientHref, physioHref } from "./BookingsPage";
 import { ComplaintBadge } from "./ComplaintsPage";
 import {
@@ -219,6 +220,8 @@ function BookingRecord({ data }: { data: StaffBookingDetail }) {
               ) : null}
             </DetailGrid>
           </Section>
+
+          <AlertsSection bookingId={booking.id} />
 
           <Section title="Sessions" description="Price and commission are fixed when the order is placed." flush>
             {data.sessions.length === 0 ? (

@@ -383,6 +383,29 @@ export function useAssignProvider() {
   );
 }
 
+export type AlertCheck = {
+  provider_id: string;
+  name: string | null;
+  phone: string;
+  eligible: boolean;
+  reasons: string[];
+  alert_status: "SENT" | "FAILED" | null;
+  alert_error: string | null;
+  alerted_at: string | null;
+};
+export type AlertReport = { whatsapp_configured: boolean; order_open: boolean; checks: AlertCheck[] };
+
+export function useBookingAlerts(id: string) {
+  return useQuery<AlertReport, ApiError>({
+    queryKey: [...KEYS.bookings, "alerts", id],
+    queryFn: () => apiGet<AlertReport>(`/admin/bookings/${id}/alerts`),
+  });
+}
+
+export function useSendAlerts() {
+  return useAdminMutation((id: string) => apiPost<{ sent: number }>(`/admin/bookings/${id}/alerts/send`));
+}
+
 export function useChangePhone() {
   return useAdminMutation(
     ({ kind, id, phone, reason }: { kind: "provider" | "patient"; id: string; phone: string; reason: string }) =>

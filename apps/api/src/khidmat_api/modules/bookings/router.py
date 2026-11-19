@@ -10,7 +10,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstrai
 from khidmat_api.core.config import Settings
 from khidmat_api.core.database import SessionDep
 from khidmat_api.core.enums import Gender
-from khidmat_api.core.errors import NotFoundError
+from khidmat_api.core.errors import ConflictError, NotFoundError
 from khidmat_api.core.pagination import Page, PageParamsDep
 from khidmat_api.core.requests import client_ip
 from khidmat_api.modules.bookings.admin_detail import StaffBookingDetail, staff_booking_detail
@@ -20,6 +20,7 @@ from khidmat_api.modules.bookings.open_requests import (
     alert_counts,
     alert_open_request,
     alert_open_requests,
+    check_alerts,
     list_open_requests,
     pick_open_request,
 )
@@ -526,6 +527,57 @@ async def update_hold(
     )
     await alert_open_request(session, booking, whatsapp, settings)
     return (await staff_booking_views(session, storage, [booking]))[0]
+
+
+class AlertCheckView(BaseModel):
+    provider_id: UUID
+    name: str | None
+    phone: str
+    eligible: bool
+    reasons: list[str]
+    alert_status: str | None
+    alert_error: str | None
+    alerted_at: datetime | None
+
+
+class AlertReport(BaseModel):
+    # False when the server has no WhatsApp phone number id or access token.
+    whatsapp_configured: bool
+    order_open: bool
+    checks: list[AlertCheckView]
+
+
+@admin_router.get("/{booking_id}/alerts", summary="Who was or would be alerted, and why not")
+async def booking_alerts(
+    booking_id: UUID, _: BookingManagerDep, session: SessionDep, whatsapp: WhatsAppDep
+) -> AlertReport:
+    booking = await _load_booking(session, booking_id)
+    checks = await check_alerts(session, booking)
+    return AlertReport(
+        whatsapp_configured=whatsapp.enabled,
+        order_open=booking.status == BookingStatus.PENDING_ASSIGNMENT
+        and booking.provider_id is None,
+        checks=[AlertCheckView(**vars(check)) for check in checks],
+    )
+
+
+@admin_router.post("/{booking_id}/alerts/send", summary="Alert everyone who fits and wasn't yet")
+async def send_booking_alerts(
+    booking_id: UUID,
+    actor: BookingManagerDep,
+    session: SessionDep,
+    whatsapp: WhatsAppDep,
+    settings: SettingsDep,
+) -> dict[str, int]:
+    booking = await _load_booking(session, booking_id)
+    if not whatsapp.enabled:
+        raise ConflictError(
+            "WhatsApp isn't set up on the server. Add WHATSAPP_PHONE_NUMBER_ID and "
+            "WHATSAPP_ACCESS_TOKEN to the API project on Vercel, then redeploy."
+        )
+    if booking.status != BookingStatus.PENDING_ASSIGNMENT or booking.provider_id is not None:
+        raise ConflictError("Only orders that still need a physio can be sent out.")
+    return {"sent": await alert_open_request(session, booking, whatsapp, settings)}
 
 
 @admin_router.post("/sessions/{session_id}/close", summary="Cancel or mark a no-show")
