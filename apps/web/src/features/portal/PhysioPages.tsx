@@ -24,7 +24,7 @@ import type { ApiError } from "@/lib/api";
 import { Tabs } from "@/components/admin/records";
 import { formatPkr } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { DOCUMENT_ACCEPT, IMAGE_ACCEPT, storageUrl, uploadFile, type FilePurpose } from "@/lib/upload";
+import { DOCUMENT_ACCEPT, uploadFile, type FilePurpose } from "@/lib/upload";
 import {
   useAdvanceSession,
   useAttachDocument,
@@ -49,6 +49,7 @@ import {
   type SessionView,
 } from "./api";
 import { minuteLabel } from "./FindPage";
+import { PhotoPicker } from "./PhotoPicker";
 import { PracticeSettings } from "./PracticeSettings";
 import { BookingStatusBadge, ContactLine, ReasonDialog, SessionStatusBadge } from "./shared";
 
@@ -548,6 +549,7 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
   const id = useId();
   const catalog = useCatalog();
   const save = useSaveProfile();
+  const savePhoto = useSaveProfile();
   const attach = useAttachDocument();
   const submit = useSubmitApplication();
   const frozen = profile !== null && ["PENDING", "APPROVED", "SUSPENDED"].includes(profile.status);
@@ -560,6 +562,7 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
   const [services, setServices] = useState<string[]>(profile?.service_type_ids ?? []);
   const [areas, setAreas] = useState<string[]>(profile?.area_ids ?? []);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
@@ -599,6 +602,24 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
     );
   };
 
+  // An uploaded photo is saved straight away. It goes with the saved details, not the form's, so
+  // edits still being typed aren't saved by accident.
+  const onPhoto = async (fileId: string) => {
+    if (profile) {
+      await savePhoto.mutateAsync({
+        gender: profile.gender,
+        cnic: null,
+        qualification: profile.qualification,
+        experience_years: profile.experience_years,
+        bio: profile.bio,
+        photo_file_id: fileId,
+        service_type_ids: profile.service_type_ids,
+        area_ids: profile.area_ids,
+      });
+    }
+    setPhotoId(fileId);
+  };
+
   const documents = new Set(profile?.documents.map((document) => document.type));
   const ready =
     profile?.photo_file_id && documents.has("CNIC_FRONT") && documents.has("CNIC_BACK") && documents.has("DEGREE");
@@ -621,17 +642,12 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
       ) : null}
       <form onSubmit={onSave} noValidate className="mt-4 space-y-4">
         <Card className="space-y-4 p-4">
-          <FileButton
-            label="Your photo"
-            accept={IMAGE_ACCEPT}
-            purpose="PROVIDER_PHOTO"
-            done={Boolean(photoId)}
-            onUploaded={(fileId) => setPhotoId(fileId)}
+          <PhotoPicker
+            currentUrl={profile?.photo_url ?? null}
+            savedNote={profile ? "Photo saved" : "Photo ready. Save the profile below to keep it."}
+            onUploaded={onPhoto}
+            onBusyChange={setPhotoBusy}
           />
-          {profile?.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={storageUrl(profile.photo_url)} alt="Your current photo" className="size-20 rounded-xl object-cover" />
-          ) : null}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField id={`${id}-gender`} label="Gender">
               <select
@@ -716,8 +732,8 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
 
         <FormError message={save.isError ? errorMessage(save.error) : null} />
         {saved ? <p role="status" className="text-sm font-medium text-brand-800">Profile saved.</p> : null}
-        <button type="submit" disabled={save.isPending} className={adminButton("primary", "w-full")}>
-          {save.isPending ? "Saving..." : "Save profile"}
+        <button type="submit" disabled={save.isPending || photoBusy} className={adminButton("primary", "w-full")}>
+          {save.isPending ? "Saving..." : photoBusy ? "Saving your photo..." : "Save profile"}
         </button>
       </form>
 
