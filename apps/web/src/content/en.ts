@@ -4,44 +4,44 @@ export const en: Dictionary = {
   locale: "en",
   dir: "ltr",
   meta: {
-    title: "Khidmat Care: Home Physiotherapy in Lahore",
+    title: "Khidmat Home Care: Home Physiotherapy in Lahore",
     description:
       "Verified physiotherapists visit you at home in Lahore, for post-surgery rehab, stroke, back pain and elderly care. Prices confirmed before your visit, and progress recorded after every session.",
   },
   pages: {
     home: {
-      title: "Khidmat Care: Home Physiotherapy in Lahore",
+      title: "Khidmat Home Care: Home Physiotherapy in Lahore",
       description:
         "Verified physiotherapists visit you at home in Lahore, for post-surgery rehab, stroke, back pain and elderly care. Prices confirmed before your visit, and progress recorded after every session.",
     },
     services: {
-      title: "Home Physiotherapy Services in Lahore | Khidmat Care",
+      title: "Home Physiotherapy Services in Lahore | Khidmat Home Care",
       description:
         "Physiotherapy at home in Lahore for recovery after surgery, stroke, back and neck pain, knee and joint pain, elderly mobility and sports injuries.",
     },
     howItWorks: {
-      title: "How Home Physiotherapy Works | Khidmat Care",
+      title: "How Home Physiotherapy Works | Khidmat Home Care",
       description:
         "Tell us the problem, we match you with a verified physiotherapist near you, and treatment happens at home with notes after every session.",
     },
     physios: {
-      title: "Physiotherapist Jobs in Lahore: Home Visits | Khidmat Care",
+      title: "Physiotherapist Jobs in Lahore: Home Visits | Khidmat Home Care",
       description:
         "Physiotherapists in Lahore: get home-visit patients near you, choose your own areas and hours, and keep most of every session fee. Apply in 2 minutes.",
     },
     faq: {
-      title: "Questions About Home Physiotherapy | Khidmat Care",
+      title: "Questions About Home Physiotherapy | Khidmat Home Care",
       description:
         "Areas we cover, prices, how we check physiotherapists, female physios, payment and booking from abroad.",
     },
     contact: {
-      title: "Contact Khidmat Care | Home Physiotherapy in Lahore",
+      title: "Contact Khidmat Home Care | Home Physiotherapy in Lahore",
       description: "Message us on WhatsApp, call, email or send a message. Our team in Lahore will reply.",
     },
     about: {
-      title: "About Khidmat Care | Home Physiotherapy in Lahore",
+      title: "About Khidmat Home Care | Home Physiotherapy in Lahore",
       description:
-        "Why we started Khidmat Care, how we check every physiotherapist, and how we look after patients' privacy.",
+        "Why we started Khidmat Home Care, how we check every physiotherapist, and how we look after patients' privacy.",
     },
   },
   nav: {
@@ -78,7 +78,7 @@ export const en: Dictionary = {
       "Price confirmed before the visit",
       "Pay in cash at the visit",
     ],
-    whatsappMessage: "Assalam o Alaikum Khidmat Care, I'd like to book home physiotherapy.",
+    whatsappMessage: "Assalam o Alaikum Khidmat Home Care, I'd like to book home physiotherapy.",
     mock: {
       onTheWay: "On the way",
       eta: "15 min away",
@@ -132,11 +132,11 @@ export const en: Dictionary = {
     faqTitle: "Questions about this treatment",
     bookTreatment: "Book this treatment",
     otherServices: "Other treatments",
-    whatsappMessage: "Assalam o Alaikum Khidmat Care, I'd like to book home physiotherapy for: {service}.",
+    whatsappMessage: "Assalam o Alaikum Khidmat Home Care, I'd like to book home physiotherapy for: {service}.",
     pages: {
       "post-surgery": {
         meta: {
-          title: "Physiotherapy at Home After Surgery in Lahore | Khidmat Care",
+          title: "Physiotherapy at Home After Surgery in Lahore | Khidmat Home Care",
           description:
             "Rehab at home after knee or hip replacement, fractures and spine surgery. A verified physiotherapist visits you in Lahore, so you don't travel while you heal.",
         },
@@ -177,7 +177,7 @@ export const en: Dictionary = {
       },
       stroke: {
         meta: {
-          title: "Stroke Rehabilitation at Home in Lahore | Khidmat Care",
+          title: "Stroke Rehabilitation at Home in Lahore | Khidmat Home Care",
           description:
             "Physiotherapy at home after a stroke or paralysis in Lahore: movement, balance, walking and everyday tasks, with a verified physiotherapist.",
         },
@@ -218,7 +218,7 @@ export const en: Dictionary = {
       },
       "back-neck": {
         meta: {
-          title: "Back and Neck Pain Physiotherapy at Home in Lahore | Khidmat Care",
+          title: "Back Pain Physiotherapy at Home in Lahore | Khidmat Home Care",
           description:
             "Physiotherapy at home in Lahore for back pain, neck pain, slipped disc and sciatica. A verified physiotherapist treats you without a trip to the clinic.",
         },
@@ -259,7 +259,7 @@ export const en: Dictionary = {
       },
       "knee-joint": {
         meta: {
-          title: "Knee and Joint Pain Physiotherapy at Home in Lahore | Khidmat Care",
+          title: "Knee Pain Physiotherapy at Home in Lahore | Khidmat Home Care",
           description:
             "Physiotherapy at home in Lahore for knee pain, arthritis, frozen shoulder and stiff joints, with a verified physiotherapist.",
         },
@@ -300,7 +300,7 @@ export const en: Dictionary = {
       },
       elderly: {
         meta: {
-          title: "Physiotherapy for Elderly at Home in Lahore | Khidmat Care",
+          title: "Physiotherapy for Elderly at Home in Lahore | Khidmat Home Care",
           description:
             "Home physiotherapy for elderly parents in Lahore: safer walking, better balance and fewer falls, with updates for the family after every visit.",
         },
@@ -341,7 +341,7 @@ export const en: Dictionary = {
       },
       sports: {
         meta: {
-          title: "Sports Injury Physiotherapy at Home in Lahore | Khidmat Care",
+          title: "Sports Injury Physiotherapy at Home in Lahore | Khidmat Home Care",
           description:
             "Physiotherapy at home in Lahore for sprains, ligament injuries and muscle strains. Get back to your sport safely with a verified physiotherapist.",
         },
@@ -403,7 +403,7 @@ export const en: Dictionary = {
     more: "How it works in detail",
   },
   why: {
-    eyebrow: "Why Khidmat Care",
+    eyebrow: "Why Khidmat Home Care",
     title: "Safe, simple home care you can trust",
     subtitle:
       "Finding home care through phone calls is guesswork. We check the physio, confirm the price before the visit and keep a record of every visit.",
@@ -447,7 +447,7 @@ export const en: Dictionary = {
     ],
     cta: "Book for your parents",
     chat: {
-      name: "Khidmat Care",
+      name: "Khidmat Home Care",
       status: "WhatsApp Business",
       messages: [
         {
@@ -495,7 +495,7 @@ export const en: Dictionary = {
       privacy: "This website doesn't save your details. They only go into your WhatsApp message.",
     },
     message: {
-      greeting: "Assalam o Alaikum Khidmat Care, I'd like to book home physiotherapy.",
+      greeting: "Assalam o Alaikum Khidmat Home Care, I'd like to book home physiotherapy.",
       service: "Treatment",
       area: "Area",
       patient: "Patient",
@@ -507,7 +507,7 @@ export const en: Dictionary = {
   physios: {
     eyebrow: "For physiotherapists",
     title: "Are you a physiotherapist in Lahore?",
-    desc: "Join Khidmat Care and get home-visit patients in the areas and at the times that suit you.",
+    desc: "Join Khidmat Home Care and get home-visit patients in the areas and at the times that suit you.",
     points: [
       "Patients near you who need your specialty",
       "Prices agreed before the visit, so no bargaining",
@@ -525,13 +525,13 @@ export const en: Dictionary = {
     ctaWhatsapp: "Ask on WhatsApp",
     learnMore: "How it works for physiotherapists",
     message:
-      "Assalam o Alaikum, I'm a physiotherapist in Lahore and I'd like to join Khidmat Care.\n\nName:\nQualification:\nYears of experience:\nAreas I can cover:\nGender:",
+      "Assalam o Alaikum, I'm a physiotherapist in Lahore and I'd like to join Khidmat Home Care.\n\nName:\nQualification:\nYears of experience:\nAreas I can cover:\nGender:",
   },
   physioPage: {
     eyebrow: "For physiotherapists in Lahore",
     title: "Home-visit patients near you, on your schedule",
     subtitle:
-      "Khidmat Care brings you patients who need your specialty, in the areas and at the hours you choose. You treat, we find the patients and handle the support.",
+      "Khidmat Home Care brings you patients who need your specialty, in the areas and at the hours you choose. You treat, we find the patients and handle the support.",
     earnEyebrow: "How you earn",
     earnTitle: "The patient pays you. You keep most of it.",
     earnDesc:
@@ -571,7 +571,7 @@ export const en: Dictionary = {
       "You see the patient's area and condition before you accept. The full address comes after you accept.",
       "Phone numbers are shared 2 hours before each session.",
       "Sessions can't be cancelled within 2 hours of the start time.",
-      "Khidmat Care patients are served through the platform only.",
+      "Khidmat Home Care patients are served through the platform only.",
       "Patients rate every session, which helps good physiotherapists stand out.",
     ],
     agreementLink: "Read the physiotherapist agreement",
@@ -579,7 +579,7 @@ export const en: Dictionary = {
     faqs: [
       {
         q: "Do I have to work full-time?",
-        a: "No. You choose the days and hours you're available, and you only get orders inside them.",
+        a: "No. You choose the days and hours you're available, and patients can book you only inside them. Open requests at other times are optional.",
       },
       {
         q: "Which areas can I cover?",
@@ -613,7 +613,7 @@ export const en: Dictionary = {
     eyebrow: "About us",
     title: "Good physiotherapy shouldn't depend on who you know",
     intro:
-      "Khidmat Care started in Lahore to make home physiotherapy safe and simple to book. Too many families find a physio through phone calls and WhatsApp groups, with no way to know who is coming. We check every physiotherapist in person, keep a record of every visit, and stay in touch until the treatment is done.",
+      "Khidmat Home Care started in Lahore to make home physiotherapy safe and simple to book. Too many families find a physio through phone calls and WhatsApp groups, with no way to know who is coming. We check every physiotherapist in person, keep a record of every visit, and stay in touch until the treatment is done.",
     values: [
       {
         title: "Checked in person",
@@ -676,8 +676,8 @@ export const en: Dictionary = {
         a: "You don't need one to book. If you have a doctor's note, X-ray or reports, send them on WhatsApp so the physio can plan the treatment.",
       },
       {
-        q: "Is Khidmat Care for emergencies?",
-        a: "No. In a medical emergency, call 1122 straight away. Khidmat Care is for planned treatment at home.",
+        q: "Is Khidmat Home Care for emergencies?",
+        a: "No. In a medical emergency, call 1122 straight away. Khidmat Home Care is for planned treatment at home.",
       },
     ],
   },
@@ -706,7 +706,7 @@ export const en: Dictionary = {
   },
   emergency: {
     title: "Medical emergency?",
-    text: "Call 1122 straight away. Khidmat Care is for planned treatment at home, not for emergencies.",
+    text: "Call 1122 straight away. Khidmat Home Care is for planned treatment at home, not for emergencies.",
     call: "Call 1122",
   },
   footer: {
@@ -719,8 +719,8 @@ export const en: Dictionary = {
     physioAgreement: "Physiotherapist agreement",
     englishOnly: "",
     location: "Lahore, Pakistan · Remote team",
-    rights: "Khidmat Care. All rights reserved.",
-    disclaimer: "Khidmat Care connects patients with independent, verified physiotherapists.",
+    rights: "Khidmat Home Care. All rights reserved.",
+    disclaimer: "Khidmat Home Care connects patients with independent, verified physiotherapists.",
   },
   mobileBar: { whatsapp: "WhatsApp", call: "Call" },
 };

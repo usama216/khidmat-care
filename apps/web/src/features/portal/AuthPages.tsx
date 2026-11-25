@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { z } from "zod";
 import { adminButton, adminInput, errorMessage, FormError, FormField } from "@/components/admin/ui";
-import { LogoMark } from "@/components/ui/Logo";
+import { LogoImage } from "@/components/ui/Logo";
 import { type CurrentUser, loginSchema, useCurrentUser, useLogin } from "@/features/auth/auth";
 import { track } from "@/lib/analytics";
 import { type ApiError, apiPost } from "@/lib/api";
@@ -35,8 +35,7 @@ function Card({ title, subtitle, children }: { title: string; subtitle?: string;
     <main className="grid min-h-dvh place-items-center bg-stone-50 p-5">
       <div className="w-full max-w-sm">
         <Link href="/" className="flex items-center justify-center gap-2.5">
-          <LogoMark className="size-9" />
-          <span className="text-lg font-bold tracking-tight text-stone-900">Khidmat Care</span>
+          <LogoImage className="h-10" />
         </Link>
         <div className="mt-6 rounded-2xl bg-white p-7 shadow-sm ring-1 ring-stone-200">
           <h1 className="text-lg font-semibold text-stone-900">{title}</h1>

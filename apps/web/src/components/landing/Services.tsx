@@ -42,7 +42,7 @@ export function Services({
             const item = t.services.items[id];
             return (
               <li key={id} data-reveal style={{ "--reveal-delay": `${(i % 3) * 80}ms` } as CSSProperties}>
-                <article className="group relative flex h-full flex-col rounded-[1.75rem] bg-white p-7 ring-1 ring-stone-200/80 transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-30px_rgba(7,38,34,0.35)] hover:ring-brand-200">
+                <article className="group relative flex h-full flex-col rounded-[1.75rem] bg-white p-7 ring-1 ring-stone-200/80 transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-30px_rgba(10,47,51,0.35)] hover:ring-brand-200">
                   <div className="grid size-13 place-items-center rounded-2xl bg-brand-50 text-brand-700 ring-1 ring-brand-100 transition duration-300 group-hover:bg-brand-700 group-hover:text-white group-hover:ring-brand-700">
                     <Icon className="size-6" />
                   </div>

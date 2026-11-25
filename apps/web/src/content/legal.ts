@@ -11,21 +11,21 @@ export type LegalDocument = {
   sections: LegalSection[];
 };
 
-const EFFECTIVE = "16 November 2026";
+const EFFECTIVE = "25 November 2026";
 
 export const terms: LegalDocument = {
   path: "/terms/",
   title: "Terms of service",
-  description: "The rules for using Khidmat Care to book home physiotherapy in Lahore.",
+  description: "The rules for using Khidmat Home Care to book home physiotherapy in Lahore.",
   updated: EFFECTIVE,
   intro:
-    "These terms apply when you use the Khidmat Care website or book home physiotherapy through us. By creating an account or booking a visit, you agree to them. If you don't agree, please don't use the service.",
+    "These terms apply when you use the Khidmat Home Care website or book home physiotherapy through us. By creating an account or booking a visit, you agree to them. If you don't agree, please don't use the service.",
   sections: [
     {
-      heading: "1. What Khidmat Care does",
+      heading: "1. What Khidmat Home Care does",
       paragraphs: [
-        "Khidmat Care connects patients in Lahore with independent physiotherapists we have checked in person. The physiotherapist provides the treatment and is responsible for their clinical decisions. We find and verify physiotherapists, arrange bookings, keep records of each visit and help when something goes wrong.",
-        "Khidmat Care is not an emergency service and not a hospital. In a medical emergency, call 1122 straight away.",
+        "Khidmat Home Care connects patients in Lahore with independent physiotherapists we have checked in person. The physiotherapist provides the treatment and is responsible for their clinical decisions. We find and verify physiotherapists, arrange bookings, keep records of each visit and help when something goes wrong.",
+        "Khidmat Home Care is not an emergency service and not a hospital. In a medical emergency, call 1122 straight away.",
       ],
     },
     {
@@ -41,7 +41,9 @@ export const terms: LegalDocument = {
       heading: "3. Bookings",
       list: [
         "You choose a physiotherapist and a time from those shown as available. The physiotherapist then accepts or declines the order.",
-        "If they decline, you can choose another physiotherapist, or our team will help.",
+        "You can also send a request without choosing. Physiotherapists who treat that problem in your area are told about it, and the first to take it is booked with you. You'll see who it is and their fee straight away.",
+        "Your time is held while a physiotherapist replies. If they decline or don't reply in time, your order opens to other physiotherapists, you can choose someone else, or our team will help.",
+        "Some physiotherapists also see patients at a clinic. The clinic's full address is shown once the visit is confirmed.",
         "The physiotherapist sees the patient's area and condition before accepting, and the full address after accepting.",
         "Phone numbers are shared with both sides 2 hours before each session, so you can coordinate the visit.",
         "In a package, sessions are scheduled one at a time with your physiotherapist.",
@@ -50,7 +52,8 @@ export const terms: LegalDocument = {
     {
       heading: "4. Prices and payment",
       list: [
-        "The price is shown before you place the order. It is fixed for that order and doesn't change at the door.",
+        "Each physiotherapist sets their own fee per session. When you choose one, you see the price before you place the order, and it doesn't change at the door.",
+        "When you send a request without choosing, or your order moves to another physiotherapist, the fee of the physiotherapist who takes it applies. If it doesn't suit you, cancel free of charge as described below.",
         "You pay the physiotherapist in cash at each visit, for that session.",
         "Don't pay more than the agreed price. If anyone asks for extra money, tell us straight away.",
       ],
@@ -80,15 +83,15 @@ export const terms: LegalDocument = {
       ],
     },
     {
-      heading: "8. Booking through Khidmat Care",
+      heading: "8. Booking through Khidmat Home Care",
       paragraphs: [
-        "Please book every session with a physiotherapist you met through us on Khidmat Care. That is how we can check who visits you, keep a record of the treatment, and step in if something goes wrong. We can't help with sessions arranged outside the service.",
+        "Please book every session with a physiotherapist you met through us on Khidmat Home Care. That is how we can check who visits you, keep a record of the treatment, and step in if something goes wrong. We can't help with sessions arranged outside the service.",
       ],
     },
     {
       heading: "9. Our responsibility",
       paragraphs: [
-        "We take care in checking physiotherapists and running the service, but physiotherapists are independent professionals. To the extent the law allows, Khidmat Care is not responsible for losses caused by a physiotherapist's own acts, by information you didn't give us, or by events outside our control. Nothing in these terms limits any responsibility that Pakistani law doesn't allow us to limit.",
+        "We take care in checking physiotherapists and running the service, but physiotherapists are independent professionals. To the extent the law allows, Khidmat Home Care is not responsible for losses caused by a physiotherapist's own acts, by information you didn't give us, or by events outside our control. Nothing in these terms limits any responsibility that Pakistani law doesn't allow us to limit.",
       ],
     },
     {
@@ -115,7 +118,7 @@ export const terms: LegalDocument = {
 export const privacy: LegalDocument = {
   path: "/privacy/",
   title: "Privacy policy",
-  description: "What personal information Khidmat Care collects, why, who sees it and how it is protected.",
+  description: "What personal information Khidmat Home Care collects, why, who sees it and how it is protected.",
   updated: EFFECTIVE,
   intro:
     "Home physiotherapy involves personal and health information, so we collect only what we need to arrange safe treatment, show it only to the people who need it, and protect it carefully. This policy explains how.",
@@ -123,7 +126,7 @@ export const privacy: LegalDocument = {
     {
       heading: "1. Who we are",
       paragraphs: [
-        "Khidmat Care is a home physiotherapy service run by a remote team based in Lahore, Pakistan. We are responsible for the personal information described here. You can reach us at the email address at the end of this page.",
+        "Khidmat Home Care is a home physiotherapy service run by a remote team based in Lahore, Pakistan. We are responsible for the personal information described here. You can reach us at the email address at the end of this page.",
       ],
     },
     {
@@ -134,7 +137,8 @@ export const privacy: LegalDocument = {
         "Booking details: the address and area of the visit, the treatment, preferred times and the condition you describe.",
         "Treatment records: session times and status, the physiotherapist's notes and pain scores, ratings and complaints.",
         "Physiotherapists: name, phone, gender, qualification, experience, photo, areas, availability, CNIC number, copies of the CNIC and degree, and balance and payment records.",
-        "Messages you send through our contact form.",
+        "Alerts we send physiotherapists on WhatsApp: who they went to, when, and whether they were sent.",
+        "Messages you send through our contact form, and our notes on how we answered.",
         "Technical information: sign-in cookies, and your IP address, which we use to prevent abuse. For limiting repeated sign-ups and messages, we store it only in a scrambled form that can't be read back.",
       ],
       paragraphs: [
@@ -154,11 +158,13 @@ export const privacy: LegalDocument = {
     {
       heading: "4. Who can see it",
       list: [
-        "Your physiotherapist sees the patient's name, gender, age, condition and area before accepting, the full address after accepting, and your phone number from 2 hours before each session.",
+        "Your physiotherapist sees the patient's name, gender, age, condition and area when you choose them, the full address after accepting, and your phone number from 2 hours before each session.",
+        "When you send a request without choosing, physiotherapists who fit it see the treatment, area, time, condition, and the patient's gender and age. They don't see the name, address or phone number until one of them takes it.",
+        "Your ratings and comments appear on the physiotherapist's public profile without your name. Please don't include private details in them.",
         "You see your physiotherapist's name, photo, qualification, experience and rating, and their phone number from 2 hours before each session.",
         "Our staff see what their role needs. For example, the verification team sees physiotherapists' documents. Every view of a CNIC or document is recorded.",
         "Companies that run our systems: Vercel hosts the website, and Amazon Web Services stores our database and files. They process data only on our instructions.",
-        "WhatsApp (Meta) carries the messages you send us there.",
+        "WhatsApp (Meta) carries the messages you send us there, and the alerts we send physiotherapists. Those alerts give the physiotherapist's name and the area, treatment and time, never the patient's name, address or phone number.",
         "Authorities, only when the law requires it.",
       ],
       paragraphs: ["We never sell personal information."],
@@ -211,15 +217,15 @@ export const privacy: LegalDocument = {
 export const physioAgreement: LegalDocument = {
   path: "/physio-agreement/",
   title: "Physiotherapist agreement",
-  description: "How physiotherapists work with Khidmat Care: verification, fees, commission, sessions and conduct.",
+  description: "How physiotherapists work with Khidmat Home Care: verification, fees, commission, sessions and conduct.",
   updated: EFFECTIVE,
   intro:
-    "This agreement applies to every physiotherapist who joins Khidmat Care. You accept it when you submit your application. Please read it carefully, and ask us if anything is unclear.",
+    "This agreement applies to every physiotherapist who joins Khidmat Home Care. You accept it when you submit your application. Please read it carefully, and ask us if anything is unclear.",
   sections: [
     {
       heading: "1. Our relationship",
       paragraphs: [
-        "You work as an independent professional, not as an employee of Khidmat Care. You decide your areas and hours, and you are responsible for your clinical decisions. Khidmat Care finds patients, verifies physiotherapists, arranges bookings and provides support.",
+        "You work as an independent professional, not as an employee of Khidmat Home Care. You decide your areas and hours, and you are responsible for your clinical decisions. Khidmat Home Care finds patients, verifies physiotherapists, arranges bookings and provides support.",
       ],
     },
     {
@@ -233,7 +239,10 @@ export const physioAgreement: LegalDocument = {
     {
       heading: "3. Orders",
       list: [
-        "You receive orders only within the areas and hours you set.",
+        "Patients who choose you can book only within the areas and hours you set. You may also be shown open requests in your areas outside those hours; taking them is up to you.",
+        "The first physiotherapist to take an open request gets it, and it is confirmed straight away.",
+        "Reply to orders in the time shown. After that the order may go to someone else.",
+        "We send new requests to your registered number on WhatsApp. You can turn this off in your profile.",
         "You see the patient's area and condition before accepting, and can accept or decline with a short reason.",
         "Once you accept, you are expected to attend every scheduled session.",
       ],
@@ -241,8 +250,9 @@ export const physioAgreement: LegalDocument = {
     {
       heading: "4. Fees, commission and balance",
       list: [
+        "You set your own fee per session, within the range shown in your dashboard. A new fee applies only to new orders.",
         "The patient pays you in cash at each visit, at the price shown on the order. Never ask for more.",
-        "Khidmat Care charges a commission on each completed session, as a percentage of the session fee. The current rate is shown on our website and in your dashboard.",
+        "Khidmat Home Care charges a commission on each completed session, as a percentage of the session fee. The current rate is shown on our website and in your dashboard.",
         "The commission rate is fixed when an order is placed. Changes apply only to new orders.",
         "Commission is deducted from a prepaid balance you keep with us, only after a session is completed.",
         "You need at least the minimum balance shown in your dashboard to receive new orders. Your balance can fall below zero if commission is due; please top up to continue.",
@@ -260,9 +270,9 @@ export const physioAgreement: LegalDocument = {
       ],
     },
     {
-      heading: "6. Patients stay with Khidmat Care",
+      heading: "6. Patients stay with Khidmat Home Care",
       paragraphs: [
-        "Patients you meet through Khidmat Care must be served through the platform. Don't offer them sessions outside Khidmat Care, and use their phone number and address only for the sessions booked through us.",
+        "Patients you meet through Khidmat Home Care must be served through the platform. Don't offer them sessions outside Khidmat Home Care, and use their phone number and address only for the sessions booked through us.",
       ],
     },
     {
@@ -289,7 +299,7 @@ export const physioAgreement: LegalDocument = {
     {
       heading: "10. Ending the agreement",
       paragraphs: [
-        "You or Khidmat Care can end this agreement at any time. Sessions already accepted should be completed or handed over through our team, and the confidentiality and patient rules above continue afterwards.",
+        "You or Khidmat Home Care can end this agreement at any time. Sessions already accepted should be completed or handed over through our team, and the confidentiality and patient rules above continue afterwards.",
       ],
     },
     {

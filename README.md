@@ -1,4 +1,4 @@
-# Khidmat Care
+# Khidmat Home Care
 
 Home physiotherapy in Lahore by verified physiotherapists.
 

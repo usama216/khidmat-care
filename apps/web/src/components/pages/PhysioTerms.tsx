@@ -52,7 +52,7 @@ function TermCard({ icon, title, desc, highlight }: { icon: ReactNode; title: st
     <div
       className={
         highlight
-          ? "rounded-[1.75rem] bg-brand-900 p-7 text-white shadow-[0_40px_80px_-40px_rgba(7,38,34,0.7)]"
+          ? "rounded-[1.75rem] bg-brand-900 p-7 text-white shadow-[0_40px_80px_-40px_rgba(10,47,51,0.7)]"
           : "rounded-[1.75rem] bg-white p-7 ring-1 ring-stone-200/80"
       }
     >

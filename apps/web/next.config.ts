@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   images: { unoptimized: true },
+  // Several root layouts (English, Urdu, portal, admin), so the 404 page needs its own.
+  experimental: { globalNotFound: true },
 };
 
 export default nextConfig;

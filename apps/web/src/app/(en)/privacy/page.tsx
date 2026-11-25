@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata({
   locale: "en",
   path: privacy.path,
-  title: `${privacy.title} | Khidmat Care`,
+  title: `${privacy.title} | Khidmat Home Care`,
   description: privacy.description,
   bilingual: false,
 });

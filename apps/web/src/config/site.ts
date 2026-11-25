@@ -9,8 +9,8 @@ function env(value: string | undefined, fallback: string) {
 const phone = env(process.env.NEXT_PUBLIC_PHONE, "+923000080216");
 
 export const site = {
-  name: "Khidmat Care",
-  url: env(process.env.NEXT_PUBLIC_SITE_URL, "https://khidmat.care").replace(/\/+$/, ""),
+  name: "Khidmat Home Care",
+  url: env(process.env.NEXT_PUBLIC_SITE_URL, "https://www.khidmathomecare.com").replace(/\/+$/, ""),
   // The backend's base URL, no trailing slash.
   apiUrl: env(process.env.NEXT_PUBLIC_API_URL, "http://localhost:8001").replace(/\/+$/, ""),
   // Off by default so test deployments (e.g. *.vercel.app) never end up in Google.
@@ -20,7 +20,9 @@ export const site = {
   whatsappNumber: env(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER, "923000080216").replace(/\D/g, ""),
   phone,
   phoneDisplay: formatPakistaniPhone(phone),
-  supportEmail: env(process.env.NEXT_PUBLIC_SUPPORT_EMAIL, "support@khidmat.care"),
+  supportEmail: env(process.env.NEXT_PUBLIC_SUPPORT_EMAIL, "support@khidmathomecare.com"),
+  // Search Console's "HTML tag" code. Not needed when the domain is verified through DNS.
+  googleVerification: env(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION, ""),
   // Meta (Facebook/Instagram) Pixel for measuring ads. Not loaded when empty.
   metaPixelId: env(process.env.NEXT_PUBLIC_META_PIXEL_ID, "").replace(/\D/g, ""),
 } as const;

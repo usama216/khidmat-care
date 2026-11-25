@@ -63,7 +63,7 @@ export function Header({ t, path, altHref }: { t: Dictionary; path: string; altH
               href={linkPath(t.locale, link.href)}
               aria-current={isActive(link.href) ? "page" : undefined}
               className={cn(
-                "rounded-full px-3 py-2 text-[0.92rem] font-medium whitespace-nowrap transition",
+                "rounded-full px-2 py-2 text-[0.86rem] font-medium whitespace-nowrap 2xl:px-3 2xl:text-[0.92rem] transition",
                 isActive(link.href)
                   ? "bg-brand-50 text-brand-800"
                   : "text-stone-600 hover:bg-stone-900/5 hover:text-stone-900",

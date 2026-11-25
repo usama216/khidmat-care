@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "../globals.css";
+import { icons } from "@/lib/metadata";
 import { AdminProviders } from "@/components/admin/AdminProviders";
 import { MetaPixel } from "@/components/MetaPixel";
 import { jakarta } from "@/lib/fonts";
 
 export const metadata: Metadata = {
-  title: { default: "Khidmat Care", template: "%s | Khidmat Care" },
+  title: { default: "Khidmat Home Care", template: "%s | Khidmat Home Care" },
   robots: { index: false, follow: false },
-  icons: { icon: "/favicon.svg" },
+  icons,
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fafaf9",
+  themeColor: "#f7f9fb",
   width: "device-width",
   initialScale: 1,
 };

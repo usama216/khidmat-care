@@ -30,7 +30,7 @@ export function ForPhysios({ t }: { t: Dictionary }) {
               </ul>
             </div>
 
-            <div data-reveal className="rounded-[1.75rem] bg-white p-7 shadow-[0_30px_70px_-40px_rgba(7,38,34,0.4)] ring-1 ring-stone-200/80">
+            <div data-reveal className="rounded-[1.75rem] bg-white p-7 shadow-[0_30px_70px_-40px_rgba(10,47,51,0.4)] ring-1 ring-stone-200/80">
               <h3 className="flex items-center gap-2.5 text-lg font-semibold text-stone-900">
                 <FileCheck2 className="size-5 text-brand-700" aria-hidden="true" />
                 {p.requirementsTitle}

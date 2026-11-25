@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { adminButton, Skeleton } from "@/components/admin/ui";
-import { LogoMark } from "@/components/ui/Logo";
+import { LogoImage, LogoMark } from "@/components/ui/Logo";
 import { isStaff, useCurrentUser, useLogout, type CurrentUser } from "@/features/auth/auth";
 import { cn } from "@/lib/cn";
 
@@ -41,8 +41,8 @@ export function PortalHeader() {
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-white">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2 font-bold tracking-tight text-stone-900">
-          <LogoMark className="size-7" />
-          <span className="hidden sm:inline">Khidmat Care</span>
+          <LogoMark className="size-8 sm:hidden" />
+          <LogoImage className="hidden h-8 sm:block" />
         </Link>
         <nav aria-label="Main" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
           {links.map((link) => (
@@ -129,7 +129,7 @@ export function EmergencyLine() {
       <a href="tel:1122" className="font-semibold text-red-800 underline">
         1122
       </a>{" "}
-      straight away. Khidmat Care is for planned treatment at home.
+      straight away. Khidmat Home Care is for planned treatment at home.
     </p>
   );
 }

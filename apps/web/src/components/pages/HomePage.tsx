@@ -29,7 +29,9 @@ export function HomePage({ t }: { t: Dictionary }) {
         data={{
           "@context": "https://schema.org",
           "@type": "WebSite",
+          "@id": `${site.url}/#website`,
           name: site.name,
+          alternateName: "Khidmat Care",
           url: `${site.url}${localePath(t.locale, "/")}`,
           inLanguage: t.locale,
           publisher: { "@id": `${site.url}/#organization` },

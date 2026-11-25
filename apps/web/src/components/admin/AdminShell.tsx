@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { isStaff, useCurrentUser, useLogout, type CurrentUser } from "@/features/auth/auth";
 import { useOverview } from "@/features/admin/api";
-import { LogoMark } from "@/components/ui/Logo";
+import { LogoImage, LogoMark } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import { adminButton, EmptyState, ErrorState, Skeleton } from "./ui";
 
@@ -103,8 +103,7 @@ function Shell({ user, children }: { user: CurrentUser; children: ReactNode }) {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center gap-2.5 border-b border-stone-200 px-4">
-        <LogoMark className="size-7" />
-        <span className="font-bold tracking-tight text-stone-900">Khidmat Care</span>
+        <LogoImage className="h-6 min-w-0" />
         <span className="ms-auto rounded bg-stone-100 px-1.5 py-0.5 text-[0.7rem] font-semibold text-stone-600">
           Admin
         </span>

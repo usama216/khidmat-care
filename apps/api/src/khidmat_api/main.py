@@ -52,7 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await engine.dispose()
 
     app = FastAPI(
-        title="Khidmat Care API",
+        title="Khidmat Home Care API",
         version="0.1.0",
         lifespan=lifespan,
         docs_url="/docs" if settings.docs_enabled else None,

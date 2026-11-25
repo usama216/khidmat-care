@@ -1,34 +1,32 @@
 import { cn } from "@/lib/cn";
 
+// Files in public/brand, made from the original public/khidmat-logo.svg. The tagline is left out:
+// at header size it can't be read.
+
+/** The round mark alone, for tight spaces. Decorative: the name is always written next to it. */
 export function LogoMark({ className }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brand/mark.svg" alt="" width={188} height={188} className={className} />;
+}
+
+/** Give it a height; the width follows. */
+export function LogoImage({ className, inverted }: { className: string; inverted?: boolean }) {
   return (
-    <svg viewBox="0 0 40 40" aria-hidden="true" className={className}>
-      <rect width="40" height="40" rx="12" className="fill-brand-700" />
-      <path
-        d="M11 19.6 20 12l9 7.6V28a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2v-8.4Z"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
-      />
-      <path d="M20 19.4v6.2M16.9 22.5h6.2" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={inverted ? "/brand/logo-white.svg" : "/brand/logo.svg"}
+      alt="Khidmat Home Care"
+      width={1084}
+      height={188}
+      className={cn("w-auto", className)}
+    />
   );
 }
 
 export function Logo({ href, className, inverted }: { href: string; className?: string; inverted?: boolean }) {
   return (
-    <a href={href} className={cn("group inline-flex items-center gap-2.5", className)} aria-label="Khidmat Care">
-      <LogoMark className="size-9 transition-transform duration-300 group-hover:-rotate-6" />
-      <span
-        lang="en"
-        className={cn(
-          "font-sans text-[1.15rem] font-bold tracking-tight",
-          inverted ? "text-white" : "text-stone-900",
-        )}
-      >
-        Khidmat<span className={inverted ? "text-brand-300" : "text-brand-600"}>Care</span>
-      </span>
+    <a href={href} className={cn("inline-flex shrink-0 items-center", className)}>
+      <LogoImage inverted={inverted} className="h-7 sm:h-9" />
     </a>
   );
 }

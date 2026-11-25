@@ -46,5 +46,18 @@
       "source": "/api/:path*",
       "destination": "https://khidmat-care-api.vercel.app/api/:path*"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "khidmat-care.vercel.app"
+        }
+      ],
+      "destination": "https://www.khidmathomecare.com/:path",
+      "permanent": true
+    }
   ]
 }

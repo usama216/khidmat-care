@@ -31,7 +31,7 @@ export function HowItWorks({ t, more = false }: { t: Dictionary; more?: boolean 
                   className="flex flex-col items-center text-center"
                 >
                   <div className="relative">
-                    <span className="grid size-16 place-items-center rounded-full bg-brand-700 text-white shadow-[0_15px_30px_-10px_rgba(23,99,87,0.6)] ring-[10px] ring-white">
+                    <span className="grid size-16 place-items-center rounded-full bg-brand-700 text-white shadow-[0_15px_30px_-10px_rgba(11,125,114,0.6)] ring-[10px] ring-white">
                       <Icon className="size-7" />
                     </span>
                     <span

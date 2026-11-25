@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { adminButton, adminInput, errorMessage, FormError, FormField } from "@/components/admin/ui";
-import { LogoMark } from "@/components/ui/Logo";
+import { LogoImage } from "@/components/ui/Logo";
 import { isStaff, loginSchema, useCurrentUser, useLogin } from "./auth";
 
 type FieldErrors = { identifier?: string; password?: string };
@@ -45,12 +45,11 @@ export function LoginForm() {
     <main className="grid min-h-dvh place-items-center bg-stone-50 p-5">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-2.5">
-          <LogoMark className="size-9" />
-          <span className="text-lg font-bold tracking-tight text-stone-900">Khidmat Care</span>
+          <LogoImage className="h-10" />
         </div>
         <div className="mt-6 rounded-2xl bg-white p-7 shadow-sm ring-1 ring-stone-200">
           <h1 className="text-lg font-semibold text-stone-900">Sign in to Admin</h1>
-          <p className="mt-1 text-sm text-stone-500">For the Khidmat Care operations team.</p>
+          <p className="mt-1 text-sm text-stone-500">For the Khidmat Home Care operations team.</p>
           <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
             <FormField id={`${id}-email`} label="Email or phone" error={errors.identifier}>
               <input

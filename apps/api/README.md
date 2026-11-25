@@ -1,4 +1,4 @@
-# Khidmat Care API
+# Khidmat Home Care API
 
 FastAPI backend. Python 3.14, PostgreSQL, SQLAlchemy 2 (async), Alembic.
 

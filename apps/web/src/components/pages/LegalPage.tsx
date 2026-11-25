@@ -37,7 +37,7 @@ export function LegalPage({ doc }: { doc: LegalDocument }) {
           <section className="rounded-2xl bg-white p-6 ring-1 ring-stone-200/80">
             <h2 className="text-lg font-semibold text-stone-900">Contact</h2>
             <p className="mt-2 text-stone-700">
-              Khidmat Care, Lahore, Pakistan. Email{" "}
+              Khidmat Home Care, Lahore, Pakistan. Email{" "}
               <a href={`mailto:${site.supportEmail}`} className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline">
                 <Mail className="size-4" aria-hidden="true" />
                 {site.supportEmail}

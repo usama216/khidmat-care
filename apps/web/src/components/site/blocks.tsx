@@ -139,7 +139,7 @@ export function CtaBand({ title, desc, children }: { title: string; desc: string
         <div className="relative overflow-hidden rounded-[2.5rem] bg-brand-900 px-8 py-14 text-center sm:px-14">
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-[radial-gradient(40rem_20rem_at_50%_-20%,rgba(128,210,187,0.25),transparent_70%)]"
+            className="absolute inset-0 bg-[radial-gradient(40rem_20rem_at_50%_-20%,rgba(95,224,205,0.25),transparent_70%)]"
           />
           <div className="relative mx-auto max-w-2xl">
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl ur:leading-[1.5]">

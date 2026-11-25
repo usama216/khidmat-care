@@ -51,7 +51,7 @@ export function ContactSection({ t }: { t: Dictionary }) {
 
         <div
           data-reveal
-          className="relative rounded-[2rem] bg-white p-6 shadow-[0_40px_90px_-50px_rgba(7,38,34,0.45)] ring-1 ring-stone-200/80 sm:p-9"
+          className="relative rounded-[2rem] bg-white p-6 shadow-[0_40px_90px_-50px_rgba(10,47,51,0.45)] ring-1 ring-stone-200/80 sm:p-9"
         >
           <ContactForm t={t} />
         </div>

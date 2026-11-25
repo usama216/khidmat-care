@@ -1,1 +1,1 @@
-"""Khidmat Care core API."""
+"""Khidmat Home Care core API."""

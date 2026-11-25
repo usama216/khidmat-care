@@ -86,7 +86,7 @@ function Backdrop() {
       <div
         className="absolute inset-0 opacity-[0.35]"
         style={{
-          backgroundImage: "radial-gradient(rgba(23,99,87,0.18) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(rgba(11,125,114,0.18) 1px, transparent 1px)",
           backgroundSize: "26px 26px",
           maskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 75%)",
           WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 75%)",
@@ -111,7 +111,7 @@ function HeroVisual({ t }: { t: Dictionary }) {
       <div className="absolute -inset-5 -rotate-3 rounded-[2.75rem] bg-linear-to-br from-brand-100 via-sand-100 to-white ring-1 ring-brand-100/60" />
       <div className="absolute -inset-5 rotate-2 rounded-[2.75rem] bg-white/40 ring-1 ring-white" />
 
-      <div className="relative rounded-[2rem] bg-white p-6 shadow-[0_40px_90px_-35px_rgba(7,38,34,0.45)] ring-1 ring-stone-900/5 sm:p-7">
+      <div className="relative rounded-[2rem] bg-white p-6 shadow-[0_40px_90px_-35px_rgba(10,47,51,0.45)] ring-1 ring-stone-900/5 sm:p-7">
         <div className="flex items-center gap-4">
           <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-brand-400 to-brand-700 text-white shadow-lg shadow-brand-700/25">
             <UserRound className="size-7" />
@@ -152,18 +152,18 @@ function HeroVisual({ t }: { t: Dictionary }) {
           <svg viewBox="0 0 300 100" className="mt-3 h-24 w-full overflow-visible">
             <defs>
               <linearGradient id="pain-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#289a82" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="#289a82" stopOpacity="0" />
+                <stop offset="0%" stopColor="#12b89c" stopOpacity="0.28" />
+                <stop offset="100%" stopColor="#12b89c" stopOpacity="0" />
               </linearGradient>
             </defs>
             {[25, 50, 75].map((y) => (
-              <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="#e7e5e4" strokeDasharray="3 5" />
+              <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="#e2e7ec" strokeDasharray="3 5" />
             ))}
             <path d="M12 22 C 45 24, 70 30, 104 32 S 165 48, 196 52 S 255 61, 288 62 L288 100 L12 100 Z" fill="url(#pain-fill)" />
             <path
               d="M12 22 C 45 24, 70 30, 104 32 S 165 48, 196 52 S 255 61, 288 62"
               fill="none"
-              stroke="#1a7c6a"
+              stroke="#0a9583"
               strokeWidth="3"
               strokeLinecap="round"
             />
@@ -174,7 +174,7 @@ function HeroVisual({ t }: { t: Dictionary }) {
                 cy={y}
                 r={i === points.length - 1 ? 6 : 4}
                 fill="#fff"
-                stroke="#1a7c6a"
+                stroke="#0a9583"
                 strokeWidth="3"
               />
             ))}
@@ -193,7 +193,7 @@ function HeroVisual({ t }: { t: Dictionary }) {
         </div>
       </div>
 
-      <div className="absolute -bottom-8 start-0 flex animate-float items-center gap-3 rounded-2xl bg-brand-950 px-4 py-3 text-white shadow-[0_20px_40px_-15px_rgba(7,38,34,0.6)] [animation-delay:-3.5s] sm:-start-8">
+      <div className="absolute -bottom-8 start-0 flex animate-float items-center gap-3 rounded-2xl bg-brand-950 px-4 py-3 text-white shadow-[0_20px_40px_-15px_rgba(10,47,51,0.6)] [animation-delay:-3.5s] sm:-start-8">
         <span className="grid size-9 place-items-center rounded-xl bg-white/10 text-accent-300">
           <Banknote className="size-5" />
         </span>

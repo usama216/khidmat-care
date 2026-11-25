@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 188 188" width="188" height="188"><defs>
+    <linearGradient id="body" x1="125" y1="75" x2="80" y2="123" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5FE0CD"/><stop offset="1" stop-color="#22C1AC"/>
+    </linearGradient>
+    <linearGradient id="bowl" x1="37" y1="118" x2="159" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16968A"/><stop offset="1" stop-color="#0B7D72"/>
+    </linearGradient>
+  </defs><circle cx="94" cy="94" r="90.5" fill="#EEFCF7" stroke="#C9F5E8" stroke-width="3"/>
+  <polyline points="45,72 97,30 150,73" fill="none" stroke="#1B6A63" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M147 41.5 V54.5 M140.5 48 H153.5" stroke="#12B89C" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="100" cy="60" r="10.8" fill="#1B6A63"/>
+  <path d="M97 76.5 C105 71.5 114 69.5 120 73.5 C122.5 77.5 124.5 82.5 125 87.5 C108 91 90 104 81 123.5 C78 112 79 100 84 91 C88 84 92 79.5 97 76.5 Z" fill="url(#body)"/>
+  <path d="M37 118.5 C68 138 128 138 159 118.5 C148 143 124 157 98 157 C72 157 48 143 37 118.5 Z" fill="url(#bowl)"/></svg>

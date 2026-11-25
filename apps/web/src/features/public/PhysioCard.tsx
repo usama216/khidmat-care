@@ -15,7 +15,7 @@ export const physioProfileHref = (id: string, extra?: Record<string, string | un
 
 export function Rating({ physio }: { physio: Pick<Physio, "rating_avg" | "rating_count"> }) {
   if (physio.rating_count === 0) {
-    return <span className="text-sm text-stone-500">New on Khidmat Care</span>;
+    return <span className="text-sm text-stone-500">New on Khidmat Home Care</span>;
   }
   return (
     <span className="inline-flex items-center gap-1 text-sm text-stone-700">

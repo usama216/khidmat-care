@@ -7,24 +7,37 @@
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-urdu: var(--font-nastaliq), var(--font-jakarta), serif;
 
-  /* Calm, trustworthy teal. Only 700+ is used for text on white (AA contrast). */
-  --color-brand-50: #effaf6;
-  --color-brand-100: #d8f3e9;
-  --color-brand-200: #b3e6d5;
-  --color-brand-300: #80d2bb;
-  --color-brand-400: #4bb69c;
-  --color-brand-500: #289a82;
-  --color-brand-600: #1a7c6a;
-  --color-brand-700: #176357;
-  --color-brand-800: #164f47;
-  --color-brand-900: #14423c;
-  --color-brand-950: #072622;
+  /* The logo's teals. Only 700+ is used for text on white, or under white text (AA contrast). */
+  --color-brand-50: #eefcf7;
+  --color-brand-100: #def8f0;
+  --color-brand-200: #c9f5e8;
+  --color-brand-300: #5fe0cd;
+  --color-brand-400: #22c1ac;
+  --color-brand-500: #12b89c;
+  --color-brand-600: #0a9583;
+  --color-brand-700: #0b7d72;
+  --color-brand-800: #1b6a63;
+  --color-brand-900: #124e4b;
+  --color-brand-950: #0a2f33;
 
-  /* Warm off-white surfaces, so the page doesn't feel clinical. */
-  --color-sand-50: #fbf9f5;
-  --color-sand-100: #f5f0e6;
-  --color-sand-200: #ebe1cd;
-  --color-sand-300: #dccbab;
+  /* Page surfaces: a whisper of the logo's mint, so white cards stand out. */
+  --color-sand-50: #f8fcfb;
+  --color-sand-100: #eff9f6;
+  --color-sand-200: #dcefe9;
+  --color-sand-300: #c3dfd7;
+
+  /* Neutrals built on the logo's navy, instead of Tailwind's warm stone. */
+  --color-stone-50: #f7f9fb;
+  --color-stone-100: #f0f3f6;
+  --color-stone-200: #e2e7ec;
+  --color-stone-300: #ccd4dc;
+  --color-stone-400: #97a1b0;
+  --color-stone-500: #5f6a7b;
+  --color-stone-600: #4a5466;
+  --color-stone-700: #364053;
+  --color-stone-800: #222c41;
+  --color-stone-900: #121a2e;
+  --color-stone-950: #0b1120;
 
   --color-accent-300: #f8cd85;
   --color-accent-400: #f5b14c;

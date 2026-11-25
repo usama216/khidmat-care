@@ -759,7 +759,7 @@ function ProfileForm({ profile }: { profile: ProviderProfile | null }) {
             />
             <span>
               I agree to the physiotherapist agreement: I keep a prepaid balance, our commission is deducted after each
-              session, I collect the stated price in cash, and I serve Khidmat Care patients only through this platform.
+              session, I collect the stated price in cash, and I serve Khidmat Home Care patients only through this platform.
             </span>
           </label>
           <FormError message={submit.isError ? errorMessage(submit.error) : null} />
