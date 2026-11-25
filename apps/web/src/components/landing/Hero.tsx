@@ -11,15 +11,7 @@ export function Hero({ t }: { t: Dictionary }) {
       <Backdrop />
       <div className="shell grid grid-cols-1 items-center gap-16 pt-10 pb-24 sm:pt-16 lg:grid-cols-[1.08fr_1fr] lg:gap-12 lg:pt-20 lg:pb-32">
         <div>
-          <p className="inline-flex items-center gap-2.5 rounded-full bg-white/80 py-1.5 ps-2 pe-4 text-sm font-semibold text-brand-800 shadow-sm ring-1 ring-brand-100 backdrop-blur">
-            <span className="relative flex size-2.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-400 opacity-70" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-brand-500" />
-            </span>
-            {h.eyebrow}
-          </p>
-
-          <h1 className="mt-7 text-[2.65rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance text-stone-900 sm:text-6xl lg:text-[4.4rem] ur:text-[2.4rem] ur:sm:text-[3.3rem] ur:lg:text-[3.6rem]">
+          <h1 className="text-[2.65rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance text-stone-900 sm:text-6xl lg:text-[4.4rem] ur:text-[2.4rem] ur:sm:text-[3.3rem] ur:lg:text-[3.6rem]">
             {h.titleStart}{" "}
             <span className="relative inline-block text-brand-700">
               {h.titleHighlight}
@@ -58,9 +50,8 @@ export function Hero({ t }: { t: Dictionary }) {
               <ArrowDown className="size-5 -rotate-90 rtl:rotate-90" />
             </a>
           </div>
-          <p className="mt-4 text-sm text-stone-500">{h.note}</p>
 
-          <ul className="mt-12 grid max-w-lg grid-cols-1 gap-x-6 gap-y-3.5 min-[420px]:grid-cols-2">
+          <ul className="mt-8 grid max-w-lg grid-cols-1 gap-x-6 gap-y-3.5 min-[420px]:grid-cols-2">
             {h.chips.map((chip) => (
               <li key={chip} className="flex items-center gap-2.5 text-[0.95rem] font-medium text-stone-700">
                 <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700">

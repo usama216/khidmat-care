@@ -61,7 +61,6 @@ export const ur: Dictionary = {
     find: "فزیو تلاش کریں",
   },
   hero: {
-    eyebrow: "لاہور میں گھر پر فزیوتھراپی",
     titleStart: "ماہر فزیوتھراپی،",
     titleHighlight: "اب آپ کے گھر پر",
     subtitle:
@@ -69,7 +68,6 @@ export const ur: Dictionary = {
     primary: "واٹس ایپ پر بُک کریں",
     secondary: "طریقہ کار دیکھیں",
     findPhysio: "فزیوتھراپسٹ تلاش کریں",
-    note: "کسی ایپ کی ضرورت نہیں۔ بس ہمیں ایک میسج کریں۔",
     chips: [
       "خود مل کر تصدیق شدہ فزیوتھراپسٹ",
       "درخواست پر خاتون فزیوتھراپسٹ",

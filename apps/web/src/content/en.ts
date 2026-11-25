@@ -63,7 +63,6 @@ export const en: Dictionary = {
     find: "Find a physio",
   },
   hero: {
-    eyebrow: "Home physiotherapy in Lahore",
     titleStart: "Expert physiotherapy,",
     titleHighlight: "at home.",
     subtitle:
@@ -71,7 +70,6 @@ export const en: Dictionary = {
     primary: "Book on WhatsApp",
     secondary: "See how it works",
     findPhysio: "Find a physiotherapist",
-    note: "No app needed. Just send us a message.",
     chips: [
       "Physios verified in person",
       "Female physio on request",

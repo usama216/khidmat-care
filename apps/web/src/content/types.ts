@@ -49,14 +49,12 @@ export type Dictionary = {
     find: string;
   };
   hero: {
-    eyebrow: string;
     titleStart: string;
     titleHighlight: string;
     subtitle: string;
     primary: string;
     secondary: string;
     findPhysio: string;
-    note: string;
     chips: string[];
     whatsappMessage: string;
     mock: {

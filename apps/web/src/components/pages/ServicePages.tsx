@@ -47,7 +47,6 @@ export function ServiceDetailPage({ t, id }: { t: Dictionary; id: ServiceId }) {
           { label: t.nav.links[0]?.label ?? "", path: "/services/" },
           { label: item.title, path },
         ]}
-        eyebrow={t.hero.eyebrow}
         title={page.headline}
         lead={page.intro}
       >
