@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Dictionary } from "@/content/types";
 import { jakarta, nastaliq } from "@/lib/fonts";
 import { cn } from "@/lib/cn";
+import { GoogleTagManager, GoogleTagManagerNoScript } from "./GoogleTagManager";
 import { MetaPixel } from "./MetaPixel";
 
 // The `js` class lets CSS hide scroll-reveal content only when JavaScript is running.
@@ -21,7 +22,9 @@ export function RootDocument({ t, children }: { t: Dictionary; children: ReactNo
         <script dangerouslySetInnerHTML={{ __html: enableJs }} />
       </head>
       <body>
+        <GoogleTagManagerNoScript />
         {children}
+        <GoogleTagManager />
         <MetaPixel />
       </body>
     </html>

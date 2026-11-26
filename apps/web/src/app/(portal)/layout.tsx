@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "../globals.css";
 import { icons } from "@/lib/metadata";
 import { AdminProviders } from "@/components/admin/AdminProviders";
+import { GoogleTagManager, GoogleTagManagerNoScript } from "@/components/GoogleTagManager";
 import { MetaPixel } from "@/components/MetaPixel";
 import { jakarta } from "@/lib/fonts";
 
@@ -22,7 +23,9 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={jakarta.variable}>
       <body className="bg-stone-50 text-[0.9375rem]">
+        <GoogleTagManagerNoScript />
         <AdminProviders>{children}</AdminProviders>
+        <GoogleTagManager />
         <MetaPixel />
       </body>
     </html>

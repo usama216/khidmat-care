@@ -25,6 +25,8 @@ export const site = {
   googleVerification: env(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION, ""),
   // Meta (Facebook/Instagram) Pixel for measuring ads. Not loaded when empty.
   metaPixelId: env(process.env.NEXT_PUBLIC_META_PIXEL_ID, "").replace(/\D/g, ""),
+  // Google Tag Manager container, like "GTM-XXXXXXX". Not loaded when empty.
+  gtmId: env(process.env.NEXT_PUBLIC_GTM_ID, "").toUpperCase().replace(/[^A-Z0-9-]/g, ""),
 } as const;
 
 // "+923001234567" -> "+92 300 1234567"; anything else is shown as given.
